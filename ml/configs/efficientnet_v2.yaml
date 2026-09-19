@@ -1,0 +1,16 @@
+# Plant Disease Classification - EfficientNetV2 Preset
+_base_: "config.yaml"
+
+model:
+  architecture: "efficientnet_v2_s"
+  pretrained: true
+  dropout: 0.3
+
+dataset:
+  img_size: 224
+  batch_size: 32
+
+training:
+  learning_rate: 0.0002
+  optimizer: "adamw"
+  weight_decay: 0.00001

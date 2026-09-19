@@ -1,0 +1,17 @@
+# Plant Disease Classification - Vision Transformer (ViT) Preset
+_base_: "config.yaml"
+
+model:
+  architecture: "vit_b_16"
+  pretrained: true
+  dropout: 0.1
+
+dataset:
+  img_size: 224
+  batch_size: 16 # Lower batch size due to ViT memory footprint
+
+training:
+  learning_rate: 0.00003 # ViT typically benefits from lower learning rate
+  weight_decay: 0.01
+  optimizer: "adamw"
+  epochs: 20
