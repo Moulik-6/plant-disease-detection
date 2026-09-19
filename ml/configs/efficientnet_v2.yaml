@@ -1,5 +1,6 @@
 # Plant Disease Classification - EfficientNetV2 Preset
 _base_: "config.yaml"
+checkpoint_dir: "ml/checkpoints/efficientnet_v2"
 
 model:
   architecture: "efficientnet_v2_s"

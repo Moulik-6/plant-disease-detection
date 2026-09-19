@@ -1,5 +1,6 @@
 # Plant Disease Classification - Vision Transformer (ViT) Preset
 _base_: "config.yaml"
+checkpoint_dir: "ml/checkpoints/vit"
 
 model:
   architecture: "vit_b_16"

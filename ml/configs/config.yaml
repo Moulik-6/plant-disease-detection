@@ -52,5 +52,5 @@ training:
     mode: "min" # min for loss, max for acc
 
 output:
-  checkpoint_dir: "ml/checkpoints"
+  checkpoint_dir: "ml/checkpoints/resnet50"
   save_best_only: false
