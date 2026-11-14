@@ -1,0 +1,113 @@
+{
+  "metadata": {
+    "device": "cuda",
+    "torch_version": "2.14.1+cu130",
+    "torch_num_threads": 4,
+    "cpu_name": "AMD EPYC 7R13 Processor",
+    "num_test_samples": 8179,
+    "limit": null
+  },
+  "device": "cuda",
+  "torch_version": "2.14.1+cu130",
+  "torch_num_threads": 4,
+  "cpu_name": "AMD EPYC 7R13 Processor",
+  "num_test_samples": 8179,
+  "models": {
+    "resnet50": {
+      "accuracy": 0.9980437706321066,
+      "macro_precision": 0.9967741569777524,
+      "macro_recall": 0.997151800087412,
+      "macro_f1": 0.9969495563505838,
+      "weights_size_mb": 90.27160549163818,
+      "median_latency_ms": null,
+      "device": "cuda",
+      "torch_version": "2.14.1+cu130",
+      "torch_num_threads": 4,
+      "cpu_name": "AMD EPYC 7R13 Processor"
+    },
+    "efficientnet_v2": {
+      "accuracy": 0.9987773566450666,
+      "macro_precision": 0.9988698898910545,
+      "macro_recall": 0.997703616709587,
+      "macro_f1": 0.998274812413427,
+      "weights_size_mb": 78.00393962860107,
+      "median_latency_ms": null,
+      "device": "cuda",
+      "torch_version": "2.14.1+cu130",
+      "torch_num_threads": 4,
+      "cpu_name": "AMD EPYC 7R13 Processor"
+    },
+    "vit": {
+      "accuracy": 0.9986550923095733,
+      "macro_precision": 0.9986402477740667,
+      "macro_recall": 0.9979016188051613,
+      "macro_f1": 0.9982601876943428,
+      "weights_size_mb": 327.462721824646,
+      "median_latency_ms": null,
+      "device": "cuda",
+      "torch_version": "2.14.1+cu130",
+      "torch_num_threads": 4,
+      "cpu_name": "AMD EPYC 7R13 Processor"
+    },
+    "ensemble": {
+      "accuracy": 0.99926641398704,
+      "macro_precision": 0.9990514634013926,
+      "macro_recall": 0.9986164923121562,
+      "macro_f1": 0.9988306261462772,
+      "weights_size_mb": 495.73826694488525,
+      "median_latency_ms": null,
+      "device": "cuda",
+      "torch_version": "2.14.1+cu130",
+      "torch_num_threads": 4,
+      "cpu_name": "AMD EPYC 7R13 Processor"
+    }
+  },
+  "resnet50": {
+    "accuracy": 0.9980437706321066,
+    "macro_precision": 0.9967741569777524,
+    "macro_recall": 0.997151800087412,
+    "macro_f1": 0.9969495563505838,
+    "weights_size_mb": 90.27160549163818,
+    "median_latency_ms": null,
+    "device": "cuda",
+    "torch_version": "2.14.1+cu130",
+    "torch_num_threads": 4,
+    "cpu_name": "AMD EPYC 7R13 Processor"
+  },
+  "efficientnet_v2": {
+    "accuracy": 0.9987773566450666,
+    "macro_precision": 0.9988698898910545,
+    "macro_recall": 0.997703616709587,
+    "macro_f1": 0.998274812413427,
+    "weights_size_mb": 78.00393962860107,
+    "median_latency_ms": null,
+    "device": "cuda",
+    "torch_version": "2.14.1+cu130",
+    "torch_num_threads": 4,
+    "cpu_name": "AMD EPYC 7R13 Processor"
+  },
+  "vit": {
+    "accuracy": 0.9986550923095733,
+    "macro_precision": 0.9986402477740667,
+    "macro_recall": 0.9979016188051613,
+    "macro_f1": 0.9982601876943428,
+    "weights_size_mb": 327.462721824646,
+    "median_latency_ms": null,
+    "device": "cuda",
+    "torch_version": "2.14.1+cu130",
+    "torch_num_threads": 4,
+    "cpu_name": "AMD EPYC 7R13 Processor"
+  },
+  "ensemble": {
+    "accuracy": 0.99926641398704,
+    "macro_precision": 0.9990514634013926,
+    "macro_recall": 0.9986164923121562,
+    "macro_f1": 0.9988306261462772,
+    "weights_size_mb": 495.73826694488525,
+    "median_latency_ms": null,
+    "device": "cuda",
+    "torch_version": "2.14.1+cu130",
+    "torch_num_threads": 4,
+    "cpu_name": "AMD EPYC 7R13 Processor"
+  }
+}
