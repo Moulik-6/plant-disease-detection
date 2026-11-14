@@ -1,0 +1,83 @@
+{
+  "environment": {
+    "device": "cpu",
+    "torch_version": "2.5.1+cpu",
+    "torch_num_threads": 4,
+    "cpu_name": "12th Gen Intel(R) Core(TM) i5-1240P",
+    "power_plan": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)"
+  },
+  "benchmark_config": {
+    "threads": 4,
+    "warmup_runs": 20,
+    "rounds": 10,
+    "runs_per_round": 20,
+    "total_timed_runs_per_model": 200,
+    "batch_size": 1
+  },
+  "models": {
+    "resnet50": {
+      "median_ms": 63.41000000247732,
+      "p10_ms": 59.88254999392666,
+      "p90_ms": 71.92747000517556,
+      "p90_p10_ratio": 1.2011424031286329,
+      "noisy_run": false,
+      "sample_count": 200
+    },
+    "efficientnet_v2": {
+      "median_ms": 71.86614999227459,
+      "p10_ms": 68.70035999600077,
+      "p90_ms": 86.638410006708,
+      "p90_p10_ratio": 1.2611056188315672,
+      "noisy_run": false,
+      "sample_count": 200
+    },
+    "vit": {
+      "median_ms": 153.50129999569617,
+      "p10_ms": 138.33684999262914,
+      "p90_ms": 168.05516999884276,
+      "p90_p10_ratio": 1.2148257677386542,
+      "noisy_run": false,
+      "sample_count": 200
+    },
+    "ensemble": {
+      "median_ms": 297.00954999862006,
+      "p10_ms": 274.6565200010082,
+      "p90_ms": 321.6005400114227,
+      "p90_p10_ratio": 1.1709190082589054,
+      "noisy_run": false,
+      "sample_count": 200
+    }
+  },
+  "resnet50": {
+    "median_ms": 63.41000000247732,
+    "p10_ms": 59.88254999392666,
+    "p90_ms": 71.92747000517556,
+    "p90_p10_ratio": 1.2011424031286329,
+    "noisy_run": false,
+    "sample_count": 200
+  },
+  "efficientnet_v2": {
+    "median_ms": 71.86614999227459,
+    "p10_ms": 68.70035999600077,
+    "p90_ms": 86.638410006708,
+    "p90_p10_ratio": 1.2611056188315672,
+    "noisy_run": false,
+    "sample_count": 200
+  },
+  "vit": {
+    "median_ms": 153.50129999569617,
+    "p10_ms": 138.33684999262914,
+    "p90_ms": 168.05516999884276,
+    "p90_p10_ratio": 1.2148257677386542,
+    "noisy_run": false,
+    "sample_count": 200
+  },
+  "ensemble": {
+    "median_ms": 297.00954999862006,
+    "p10_ms": 274.6565200010082,
+    "p90_ms": 321.6005400114227,
+    "p90_p10_ratio": 1.1709190082589054,
+    "noisy_run": false,
+    "sample_count": 200
+  }
+}

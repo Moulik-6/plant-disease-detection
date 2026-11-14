@@ -1,3 +1,7 @@
+# NOTE:
+# - On the AWS Deep Learning AMI, the preinstalled torch must be used and torch must not be reinstalled.
+# - On the Windows CPU laptop, the tested versions are torch==2.5.1 and torchvision==0.20.1 (CPU build from https://download.pytorch.org/whl/cpu).
+
 torch>=2.0.0
 torchvision>=0.15.0
 timm>=0.9.0
@@ -6,3 +10,8 @@ tqdm>=4.65.0
 scikit-learn>=1.2.0
 numpy>=1.24.0
 Pillow>=9.5.0
+grad-cam>=1.5.0
+opencv-python>=4.8.0
+matplotlib>=3.7.0
+ttach>=0.0.3
+imagehash>=4.3.0

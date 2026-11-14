@@ -5,3 +5,15 @@ __pycache__/
 *.pyc
 .env
 ml/auth_colab.py
+.venv/
+ml/visualizations/
+ml/results/*.npy
+ml/results/leakage/
+ml/results_smoke/
+*.pem
+kaggle.json
+ml/results/*
+!ml/results/metrics.json
+!ml/results/latency.json
+!ml/results/leakage_metrics.json
+!ml/results/per_class_metrics.csv

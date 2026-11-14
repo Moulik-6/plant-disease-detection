@@ -1,0 +1,877 @@
+{
+  "dataset_split": {
+    "num_train": 37997,
+    "num_val": 8129,
+    "num_test": 8179,
+    "num_classes": 38
+  },
+  "overall_leakage": {
+    "total_test_samples": 8179,
+    "distance_0": {
+      "count": 4,
+      "percentage": 0.048905734197334634
+    },
+    "distance_le4": {
+      "count": 204,
+      "percentage": 2.4941924440640664
+    },
+    "distance_le8": {
+      "count": 2049,
+      "percentage": 25.051962342584666
+    }
+  },
+  "top_10_worst_classes": [
+    {
+      "class_idx": 24,
+      "class_name": "Soybean___healthy",
+      "total_test": 764,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 140,
+      "pct_dist_le4": 18.32460732984293,
+      "count_dist_le8": 617,
+      "pct_dist_le8": 80.75916230366492
+    },
+    {
+      "class_idx": 23,
+      "class_name": "Raspberry___healthy",
+      "total_test": 57,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 6,
+      "pct_dist_le4": 10.526315789473683,
+      "count_dist_le8": 43,
+      "pct_dist_le8": 75.43859649122807
+    },
+    {
+      "class_idx": 22,
+      "class_name": "Potato___healthy",
+      "total_test": 24,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 1,
+      "pct_dist_le4": 4.166666666666666,
+      "count_dist_le8": 7,
+      "pct_dist_le8": 29.166666666666668
+    },
+    {
+      "class_idx": 6,
+      "class_name": "Cherry_(including_sour)___healthy",
+      "total_test": 129,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 5,
+      "pct_dist_le4": 3.875968992248062,
+      "count_dist_le8": 79,
+      "pct_dist_le8": 61.240310077519375
+    },
+    {
+      "class_idx": 19,
+      "class_name": "Pepper,_bell___healthy",
+      "total_test": 223,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 6,
+      "pct_dist_le4": 2.690582959641256,
+      "count_dist_le8": 113,
+      "pct_dist_le8": 50.672645739910315
+    },
+    {
+      "class_idx": 5,
+      "class_name": "Cherry_(including_sour)___Powdery_mildew",
+      "total_test": 159,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 4,
+      "pct_dist_le4": 2.515723270440252,
+      "count_dist_le8": 23,
+      "pct_dist_le8": 14.465408805031446
+    },
+    {
+      "class_idx": 3,
+      "class_name": "Apple___healthy",
+      "total_test": 248,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 6,
+      "pct_dist_le4": 2.4193548387096775,
+      "count_dist_le8": 61,
+      "pct_dist_le8": 24.596774193548388
+    },
+    {
+      "class_idx": 33,
+      "class_name": "Tomato___Spider_mites Two-spotted_spider_mite",
+      "total_test": 252,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 4,
+      "pct_dist_le4": 1.5873015873015872,
+      "count_dist_le8": 66,
+      "pct_dist_le8": 26.190476190476193
+    },
+    {
+      "class_idx": 4,
+      "class_name": "Blueberry___healthy",
+      "total_test": 226,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 3,
+      "pct_dist_le4": 1.3274336283185841,
+      "count_dist_le8": 64,
+      "pct_dist_le8": 28.31858407079646
+    },
+    {
+      "class_idx": 18,
+      "class_name": "Pepper,_bell___Bacterial_spot",
+      "total_test": 151,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 2,
+      "pct_dist_le4": 1.3245033112582782,
+      "count_dist_le8": 28,
+      "pct_dist_le8": 18.543046357615893
+    }
+  ],
+  "all_class_stats": [
+    {
+      "class_idx": 0,
+      "class_name": "Apple___Apple_scab",
+      "total_test": 95,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 6,
+      "pct_dist_le8": 6.315789473684211
+    },
+    {
+      "class_idx": 1,
+      "class_name": "Apple___Black_rot",
+      "total_test": 94,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 22,
+      "pct_dist_le8": 23.404255319148938
+    },
+    {
+      "class_idx": 2,
+      "class_name": "Apple___Cedar_apple_rust",
+      "total_test": 42,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 0,
+      "pct_dist_le8": 0.0
+    },
+    {
+      "class_idx": 3,
+      "class_name": "Apple___healthy",
+      "total_test": 248,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 6,
+      "pct_dist_le4": 2.4193548387096775,
+      "count_dist_le8": 61,
+      "pct_dist_le8": 24.596774193548388
+    },
+    {
+      "class_idx": 4,
+      "class_name": "Blueberry___healthy",
+      "total_test": 226,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 3,
+      "pct_dist_le4": 1.3274336283185841,
+      "count_dist_le8": 64,
+      "pct_dist_le8": 28.31858407079646
+    },
+    {
+      "class_idx": 5,
+      "class_name": "Cherry_(including_sour)___Powdery_mildew",
+      "total_test": 159,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 4,
+      "pct_dist_le4": 2.515723270440252,
+      "count_dist_le8": 23,
+      "pct_dist_le8": 14.465408805031446
+    },
+    {
+      "class_idx": 6,
+      "class_name": "Cherry_(including_sour)___healthy",
+      "total_test": 129,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 5,
+      "pct_dist_le4": 3.875968992248062,
+      "count_dist_le8": 79,
+      "pct_dist_le8": 61.240310077519375
+    },
+    {
+      "class_idx": 7,
+      "class_name": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+      "total_test": 78,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 0,
+      "pct_dist_le8": 0.0
+    },
+    {
+      "class_idx": 8,
+      "class_name": "Corn_(maize)___Common_rust_",
+      "total_test": 180,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 3,
+      "pct_dist_le8": 1.6666666666666667
+    },
+    {
+      "class_idx": 9,
+      "class_name": "Corn_(maize)___Northern_Leaf_Blight",
+      "total_test": 149,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 0,
+      "pct_dist_le8": 0.0
+    },
+    {
+      "class_idx": 10,
+      "class_name": "Corn_(maize)___healthy",
+      "total_test": 175,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 0,
+      "pct_dist_le8": 0.0
+    },
+    {
+      "class_idx": 11,
+      "class_name": "Grape___Black_rot",
+      "total_test": 177,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 45,
+      "pct_dist_le8": 25.423728813559322
+    },
+    {
+      "class_idx": 12,
+      "class_name": "Grape___Esca_(Black_Measles)",
+      "total_test": 208,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 57,
+      "pct_dist_le8": 27.403846153846157
+    },
+    {
+      "class_idx": 13,
+      "class_name": "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)",
+      "total_test": 162,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 10,
+      "pct_dist_le8": 6.172839506172839
+    },
+    {
+      "class_idx": 14,
+      "class_name": "Grape___healthy",
+      "total_test": 64,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 14,
+      "pct_dist_le8": 21.875
+    },
+    {
+      "class_idx": 15,
+      "class_name": "Orange___Haunglongbing_(Citrus_greening)",
+      "total_test": 827,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 9,
+      "pct_dist_le4": 1.0882708585247884,
+      "count_dist_le8": 247,
+      "pct_dist_le8": 29.866989117291414
+    },
+    {
+      "class_idx": 16,
+      "class_name": "Peach___Bacterial_spot",
+      "total_test": 346,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 20,
+      "pct_dist_le8": 5.780346820809249
+    },
+    {
+      "class_idx": 17,
+      "class_name": "Peach___healthy",
+      "total_test": 55,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 10,
+      "pct_dist_le8": 18.181818181818183
+    },
+    {
+      "class_idx": 18,
+      "class_name": "Pepper,_bell___Bacterial_spot",
+      "total_test": 151,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 2,
+      "pct_dist_le4": 1.3245033112582782,
+      "count_dist_le8": 28,
+      "pct_dist_le8": 18.543046357615893
+    },
+    {
+      "class_idx": 19,
+      "class_name": "Pepper,_bell___healthy",
+      "total_test": 223,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 6,
+      "pct_dist_le4": 2.690582959641256,
+      "count_dist_le8": 113,
+      "pct_dist_le8": 50.672645739910315
+    },
+    {
+      "class_idx": 20,
+      "class_name": "Potato___Early_blight",
+      "total_test": 150,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 18,
+      "pct_dist_le8": 12.0
+    },
+    {
+      "class_idx": 21,
+      "class_name": "Potato___Late_blight",
+      "total_test": 150,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 1,
+      "pct_dist_le4": 0.6666666666666667,
+      "count_dist_le8": 55,
+      "pct_dist_le8": 36.666666666666664
+    },
+    {
+      "class_idx": 22,
+      "class_name": "Potato___healthy",
+      "total_test": 24,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 1,
+      "pct_dist_le4": 4.166666666666666,
+      "count_dist_le8": 7,
+      "pct_dist_le8": 29.166666666666668
+    },
+    {
+      "class_idx": 23,
+      "class_name": "Raspberry___healthy",
+      "total_test": 57,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 6,
+      "pct_dist_le4": 10.526315789473683,
+      "count_dist_le8": 43,
+      "pct_dist_le8": 75.43859649122807
+    },
+    {
+      "class_idx": 24,
+      "class_name": "Soybean___healthy",
+      "total_test": 764,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 140,
+      "pct_dist_le4": 18.32460732984293,
+      "count_dist_le8": 617,
+      "pct_dist_le8": 80.75916230366492
+    },
+    {
+      "class_idx": 25,
+      "class_name": "Squash___Powdery_mildew",
+      "total_test": 276,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 0,
+      "pct_dist_le8": 0.0
+    },
+    {
+      "class_idx": 26,
+      "class_name": "Strawberry___Leaf_scorch",
+      "total_test": 167,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 1,
+      "pct_dist_le4": 0.5988023952095809,
+      "count_dist_le8": 17,
+      "pct_dist_le8": 10.179640718562874
+    },
+    {
+      "class_idx": 27,
+      "class_name": "Strawberry___healthy",
+      "total_test": 69,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 12,
+      "pct_dist_le8": 17.391304347826086
+    },
+    {
+      "class_idx": 28,
+      "class_name": "Tomato___Bacterial_spot",
+      "total_test": 320,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 4,
+      "pct_dist_le4": 1.25,
+      "count_dist_le8": 104,
+      "pct_dist_le8": 32.5
+    },
+    {
+      "class_idx": 29,
+      "class_name": "Tomato___Early_blight",
+      "total_test": 150,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 24,
+      "pct_dist_le8": 16.0
+    },
+    {
+      "class_idx": 30,
+      "class_name": "Tomato___Late_blight",
+      "total_test": 287,
+      "count_dist_0": 3,
+      "pct_dist_0": 1.0452961672473868,
+      "count_dist_le4": 3,
+      "pct_dist_le4": 1.0452961672473868,
+      "count_dist_le8": 35,
+      "pct_dist_le8": 12.195121951219512
+    },
+    {
+      "class_idx": 31,
+      "class_name": "Tomato___Leaf_Mold",
+      "total_test": 144,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 29,
+      "pct_dist_le8": 20.13888888888889
+    },
+    {
+      "class_idx": 32,
+      "class_name": "Tomato___Septoria_leaf_spot",
+      "total_test": 267,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 36,
+      "pct_dist_le8": 13.48314606741573
+    },
+    {
+      "class_idx": 33,
+      "class_name": "Tomato___Spider_mites Two-spotted_spider_mite",
+      "total_test": 252,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 4,
+      "pct_dist_le4": 1.5873015873015872,
+      "count_dist_le8": 66,
+      "pct_dist_le8": 26.190476190476193
+    },
+    {
+      "class_idx": 34,
+      "class_name": "Tomato___Target_Spot",
+      "total_test": 212,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 1,
+      "pct_dist_le4": 0.4716981132075472,
+      "count_dist_le8": 31,
+      "pct_dist_le8": 14.622641509433961
+    },
+    {
+      "class_idx": 35,
+      "class_name": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+      "total_test": 805,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 6,
+      "pct_dist_le4": 0.7453416149068323,
+      "count_dist_le8": 119,
+      "pct_dist_le8": 14.782608695652174
+    },
+    {
+      "class_idx": 36,
+      "class_name": "Tomato___Tomato_mosaic_virus",
+      "total_test": 57,
+      "count_dist_0": 0,
+      "pct_dist_0": 0.0,
+      "count_dist_le4": 0,
+      "pct_dist_le4": 0.0,
+      "count_dist_le8": 5,
+      "pct_dist_le8": 8.771929824561402
+    },
+    {
+      "class_idx": 37,
+      "class_name": "Tomato___healthy",
+      "total_test": 240,
+      "count_dist_0": 1,
+      "pct_dist_0": 0.4166666666666667,
+      "count_dist_le4": 2,
+      "pct_dist_le4": 0.8333333333333334,
+      "count_dist_le8": 29,
+      "pct_dist_le8": 12.083333333333334
+    }
+  ],
+  "model_leakage_performance": {
+    "resnet50": {
+      "near_accuracy_pct": 100.0,
+      "near_errors": 0,
+      "near_total": 204,
+      "clean_accuracy_pct": 99.79937304075234,
+      "clean_errors": 16,
+      "clean_total": 7975,
+      "overall_accuracy_pct": 99.80437706321067,
+      "overall_errors": 16,
+      "overall_total": 8179,
+      "accuracy_gap_pct": 0.20062695924765706
+    },
+    "efficientnet_v2": {
+      "near_accuracy_pct": 100.0,
+      "near_errors": 0,
+      "near_total": 204,
+      "clean_accuracy_pct": 99.87460815047022,
+      "clean_errors": 10,
+      "clean_total": 7975,
+      "overall_accuracy_pct": 99.87773566450666,
+      "overall_errors": 10,
+      "overall_total": 8179,
+      "accuracy_gap_pct": 0.12539184952977678
+    },
+    "vit": {
+      "near_accuracy_pct": 100.0,
+      "near_errors": 0,
+      "near_total": 204,
+      "clean_accuracy_pct": 99.86206896551724,
+      "clean_errors": 11,
+      "clean_total": 7975,
+      "overall_accuracy_pct": 99.86550923095733,
+      "overall_errors": 11,
+      "overall_total": 8179,
+      "accuracy_gap_pct": 0.13793103448276156
+    },
+    "ensemble": {
+      "near_accuracy_pct": 100.0,
+      "near_errors": 0,
+      "near_total": 204,
+      "clean_accuracy_pct": 99.92476489028213,
+      "clean_errors": 6,
+      "clean_total": 7975,
+      "overall_accuracy_pct": 99.92664139870399,
+      "overall_errors": 6,
+      "overall_total": 8179,
+      "accuracy_gap_pct": 0.07523510971786607
+    }
+  },
+  "top_closest_pairs": [
+    {
+      "rank": 1,
+      "distance": 0,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Late_blight\\3fae9c64-18f0-4a67-9f97-554248bb1bed___GHLB_PS Leaf 24 Day 16.jpg",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Late_blight\\5de6da85-f8c4-48c4-b463-3e6bd78884cc___GHLB_PS Leaf 24 Day 16.jpg",
+      "test_class": "Tomato___Late_blight",
+      "train_class": "Tomato___Late_blight",
+      "same_class": true
+    },
+    {
+      "rank": 2,
+      "distance": 0,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Late_blight\\48c55974-9fe9-4f4b-94f7-c8cd127d1e05___GHLB_PS Leaf 23.7 Day 13.jpg",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Late_blight\\bd4f09bd-ee85-4ab1-bce0-8cde3fdd7f1b___GHLB_PS Leaf 23.7 Day 13.jpg",
+      "test_class": "Tomato___Late_blight",
+      "train_class": "Tomato___Late_blight",
+      "same_class": true
+    },
+    {
+      "rank": 3,
+      "distance": 0,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___healthy\\488feb1c-4b9f-44e7-8aa6-4103a9601f5f___GH_HL Leaf 434.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___healthy\\a5de43e7-fc2f-4a14-a8e6-c0f2f94c84f1___GH_HL Leaf 434.JPG",
+      "test_class": "Tomato___healthy",
+      "train_class": "Tomato___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 4,
+      "distance": 0,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Late_blight\\5688ea99-c949-41d0-bbab-9cbf0ffb8bcd___GHLB2 Leaf 8677.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Late_blight\\e20107e7-137f-400e-817f-5dc4c58e5d70___GHLB2 Leaf 8677.JPG",
+      "test_class": "Tomato___Late_blight",
+      "train_class": "Tomato___Late_blight",
+      "same_class": true
+    },
+    {
+      "rank": 5,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Cherry_(including_sour)___Powdery_mildew\\324c0529-3992-4015-91f2-1f8c8b87940f___FREC_Pwd.M 0323.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Cherry_(including_sour)___Powdery_mildew\\3928d15a-b841-4524-a5be-b34546c358f2___FREC_Pwd.M 0324.JPG",
+      "test_class": "Cherry_(including_sour)___Powdery_mildew",
+      "train_class": "Cherry_(including_sour)___Powdery_mildew",
+      "same_class": true
+    },
+    {
+      "rank": 6,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Tomato_Yellow_Leaf_Curl_Virus\\55d128be-cc38-4493-ac46-16b931b41664___UF.GRC_YLCV_Lab 02542.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Tomato_Yellow_Leaf_Curl_Virus\\ffb119bc-8d09-4f83-b1c5-483599a93d03___UF.GRC_YLCV_Lab 02541.JPG",
+      "test_class": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+      "train_class": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+      "same_class": true
+    },
+    {
+      "rank": 7,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\b1a2b2cc-1f8b-4700-a1a2-348f03f59482___RS_HL 6488.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\a821e906-0e8f-459e-bcbc-321ff0c21f3d___RS_HL 6490.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 8,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\769a9b40-57e7-4df6-976e-1d278559844f___RS_HL 4958.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\7cc4e8b3-a174-4b3a-b461-8e15c306e5cf___RS_HL 2734.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 9,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Cherry_(including_sour)___Powdery_mildew\\cd6f8dee-5c38-4e3c-946d-2d79a517d76e___FREC_Pwd.M 0284.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Cherry_(including_sour)___Powdery_mildew\\52fdca01-c6e8-4903-a8ff-c9825071e6d2___FREC_Pwd.M 0283.JPG",
+      "test_class": "Cherry_(including_sour)___Powdery_mildew",
+      "train_class": "Cherry_(including_sour)___Powdery_mildew",
+      "same_class": true
+    },
+    {
+      "rank": 10,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\b09ab269-e19c-4f53-80fe-ee7552d13a61___RS_HL 5502.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\b23bc2ab-d7f6-47dc-a0d4-03beaa7cb1a7___RS_HL 4226.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 11,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Pepper,_bell___healthy\\2a5eb7c8-4c8b-43a6-9448-b3983beef06c___JR_HL 8248.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Pepper,_bell___healthy\\e7d0f9a3-f28d-4c66-aba7-ce7c831590f5___JR_HL 8249.JPG",
+      "test_class": "Pepper,_bell___healthy",
+      "train_class": "Pepper,_bell___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 12,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\b4f30be3-8f14-4138-8b06-9beb44b20c62___RS_HL 3764.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\d52c7953-d971-4e49-9ff6-5f3721da8a77___RS_HL 5401.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 13,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\7bc65ae7-0a4d-4369-8335-3737a5441bfa___RS_HL 4640.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\fbd3c90b-6714-4bb4-8aad-a21f681dbd10___RS_HL 3732.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 14,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Raspberry___healthy\\a8bea1f3-eff7-4819-b0a8-72259d864518___Mary_HL 6376.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\07ed2de2-1a88-4b3b-adc2-94102d5eaba5___RS_HL 4700.JPG",
+      "test_class": "Raspberry___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": false
+    },
+    {
+      "rank": 15,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Spider_mites Two-spotted_spider_mite\\a75666ed-91d1-4f47-bcf2-554c8a5a3fd5___Com.G_SpM_FL 9551.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Spider_mites Two-spotted_spider_mite\\f7b7b4c8-1420-4ffe-ba64-97be026edeb4___Com.G_SpM_FL 8978.JPG",
+      "test_class": "Tomato___Spider_mites Two-spotted_spider_mite",
+      "train_class": "Tomato___Spider_mites Two-spotted_spider_mite",
+      "same_class": true
+    },
+    {
+      "rank": 16,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\0349cb1c-194d-43e9-9d53-170e816d337e___RS_HL 5180.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\1b951855-b456-4f7c-b0b1-cf663d047929___RS_HL 5482.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 17,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Tomato_Yellow_Leaf_Curl_Virus\\8e2f397f-3ebe-4b51-964b-e5d5372e0a8b___UF.GRC_YLCV_Lab 02095.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Tomato_Yellow_Leaf_Curl_Virus\\76762a24-0c95-40b2-b861-fc743293fb7d___UF.GRC_YLCV_Lab 02094.JPG",
+      "test_class": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+      "train_class": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+      "same_class": true
+    },
+    {
+      "rank": 18,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\0e4e98ca-4127-4370-ab27-1f20adb02754___RS_HL 5232.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\152b6942-b876-402b-b69e-d8294bd0e264___RS_HL 5487.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 19,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\56ad27f3-7d42-455a-8c57-5b53f94b4105___RS_HL 5778 1.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\8a2007d8-8210-4863-bd14-bc528b5c4118___RS_HL 5479.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 20,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Cherry_(including_sour)___Powdery_mildew\\176d6faf-285c-4bf0-a643-cdfa9b4c741d___FREC_Pwd.M 0348.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Cherry_(including_sour)___Powdery_mildew\\341d8850-26e0-4ac5-a560-da2be3fc4b24___FREC_Pwd.M 0349.JPG",
+      "test_class": "Cherry_(including_sour)___Powdery_mildew",
+      "train_class": "Cherry_(including_sour)___Powdery_mildew",
+      "same_class": true
+    },
+    {
+      "rank": 21,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\95841526-273c-4161-8de1-20c69d6650ba___RS_HL 5833.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\6bfa1286-a35f-4dde-a61a-959fea14cf11___RS_HL 5847.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 22,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\c55c20a5-c529-43af-949e-cfaad2377481___RS_HL 5454.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\1f770cd9-0e55-48e7-93e5-a93144b85f1e___RS_HL 3663.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 23,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\79a83cc2-ad33-403b-9dc7-7f9757abf288___RS_HL 3604.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\8c76beff-437e-4c5a-8c6a-eed877004255___RS_HL 5331.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 24,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\ae6fda7d-157f-4d4e-bdd5-317847598b88___RS_HL 3708.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Cherry_(including_sour)___healthy\\6252a6cd-23cf-495c-b452-518100eb243c___JR_HL 4155.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Cherry_(including_sour)___healthy",
+      "same_class": false
+    },
+    {
+      "rank": 25,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\90079800-1e58-4ffa-9dc3-10062656fd53___RS_HL 5569 1.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\d4f02410-2c32-4c58-83dd-b3febe7446ad___RS_HL 5567 1.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 26,
+      "distance": 2,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\f7989458-20b9-4b08-8fb1-7cf4be78dafe___RS_HL 3447.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\482bb92a-9b28-4707-a266-a3fcccd0ae8c___RS_HL 5187.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 27,
+      "distance": 4,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Tomato_Yellow_Leaf_Curl_Virus\\79fa18a3-cf77-4211-b105-893ea4eb7498___UF.GRC_YLCV_Lab 02978.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Tomato_Yellow_Leaf_Curl_Virus\\acb9169b-21bc-4b31-ba3c-a24909521156___UF.GRC_YLCV_Lab 02981.JPG",
+      "test_class": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+      "train_class": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+      "same_class": true
+    },
+    {
+      "rank": 28,
+      "distance": 4,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\e7d36e15-55ac-4557-b983-d911b18ccf57___RS_HL 6277.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\1e393e44-a23d-4af0-9c42-7a62a5cc985f___RS_HL 6302.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 29,
+      "distance": 4,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\4daea54f-0aed-4fe1-9194-74f8acc23bc1___RS_HL 5507.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\0f04ef1e-2a20-4986-9530-40707c70b708___RS_HL 7145.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Soybean___healthy",
+      "same_class": true
+    },
+    {
+      "rank": 30,
+      "distance": 4,
+      "test_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Soybean___healthy\\4bf93fae-8468-4214-a855-e71c9de50c4e___RS_HL 3773.JPG",
+      "train_image": "C:\\Major Project\\plant-disease-detection\\ml\\../data/plantvillage_dataset/color\\Tomato___Septoria_leaf_spot\\2f4afdee-f957-400f-8515-4ea92173d00d___Matt.S_CG 0667.JPG",
+      "test_class": "Soybean___healthy",
+      "train_class": "Tomato___Septoria_leaf_spot",
+      "same_class": false
+    }
+  ]
+}

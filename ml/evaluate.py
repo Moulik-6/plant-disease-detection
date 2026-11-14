@@ -17,7 +17,7 @@ from src.utils import load_config
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate plant disease classification model")
     parser.add_argument("--config", type=str, default="ml/configs/config.yaml", help="Path to config file")
-    parser.add_argument("--checkpoint", type=str, default="ml/checkpoints/best_model.pth", help="Checkpoint file path")
+    parser.add_argument("--checkpoint", type=str, default="ml/checkpoints/resnet50/best_model.pth", help="Checkpoint file path")
     parser.add_argument("--data-dir", type=str, default=None, help="Dataset directory override")
     parser.add_argument("--device", type=str, default=None, help="Device (cuda / cpu)")
     return parser.parse_args()
@@ -31,7 +31,7 @@ def main():
         raise FileNotFoundError(f"Checkpoint file '{args.checkpoint}' not found.")
         
     print(f"[*] Loading checkpoint from {args.checkpoint}...")
-    checkpoint = torch.load(args.checkpoint, map_location="cpu")
+    checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     
     config = checkpoint.get("config", load_config(args.config))
     class_to_idx = checkpoint.get("class_to_idx")
