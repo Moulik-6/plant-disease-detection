@@ -17,3 +17,6 @@ ml/results/*
 !ml/results/latency.json
 !ml/results/leakage_metrics.json
 !ml/results/per_class_metrics.csv
+!ml/results/plantdoc/
+ml/results/plantdoc/*
+!ml/results/plantdoc/metrics.json

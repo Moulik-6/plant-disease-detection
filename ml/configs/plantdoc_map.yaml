@@ -1,0 +1,29 @@
+mapping:
+  "Apple Scab Leaf": {target: "Apple___Apple_scab", confidence: high}
+  "Apple leaf": {target: "Apple___healthy", confidence: high}
+  "Apple rust leaf": {target: "Apple___Cedar_apple_rust", confidence: high}
+  "Bell_pepper leaf spot": {target: "Pepper,_bell___Bacterial_spot", confidence: medium}
+  "Bell_pepper leaf": {target: "Pepper,_bell___healthy", confidence: high}
+  "Blueberry leaf": {target: "Blueberry___healthy", confidence: high}
+  "Cherry leaf": {target: "Cherry_(including_sour)___healthy", confidence: high}
+  "Corn Gray leaf spot": {target: "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", confidence: high}
+  "Corn leaf blight": {target: "Corn_(maize)___Northern_Leaf_Blight", confidence: medium}
+  "Corn rust leaf": {target: "Corn_(maize)___Common_rust_", confidence: high}
+  "Peach leaf": {target: "Peach___healthy", confidence: high}
+  "Potato leaf early blight": {target: "Potato___Early_blight", confidence: high}
+  "Potato leaf late blight": {target: "Potato___Late_blight", confidence: high}
+  "Raspberry leaf": {target: "Raspberry___healthy", confidence: high}
+  "Soyabean leaf": {target: "Soybean___healthy", confidence: high}
+  "Squash Powdery mildew leaf": {target: "Squash___Powdery_mildew", confidence: high}
+  "Strawberry leaf": {target: "Strawberry___healthy", confidence: high}
+  "Tomato Early blight leaf": {target: "Tomato___Early_blight", confidence: high}
+  "Tomato Septoria leaf spot": {target: "Tomato___Septoria_leaf_spot", confidence: high}
+  "Tomato leaf bacterial spot": {target: "Tomato___Bacterial_spot", confidence: high}
+  "Tomato leaf late blight": {target: "Tomato___Late_blight", confidence: high}
+  "Tomato leaf mosaic virus": {target: "Tomato___Tomato_mosaic_virus", confidence: high}
+  "Tomato leaf yellow virus": {target: "Tomato___Tomato_Yellow_Leaf_Curl_Virus", confidence: high}
+  "Tomato leaf": {target: "Tomato___healthy", confidence: high}
+  "Tomato mold leaf": {target: "Tomato___Leaf_Mold", confidence: high}
+  "Tomato two spotted spider mites leaf": {target: "Tomato___Spider_mites Two-spotted_spider_mite", confidence: high}
+  "grape leaf black rot": {target: "Grape___Black_rot", confidence: high}
+  "grape leaf": {target: "Grape___healthy", confidence: high}
