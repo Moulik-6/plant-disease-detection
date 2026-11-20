@@ -1,0 +1,31 @@
+# Experiment A: PlantVillage Only (Baseline)
+# Matches original config.yaml: trained strictly on pv_train, evaluated on pv_val,
+# with baseline augmentation and 1e-4 learning rate.
+
+base: "base.yaml"
+exp_name: "a_pv_only"
+
+dataset:
+  train_splits:
+    - "pv_train"
+  val_splits:
+    - "pv_val"
+
+augmentation: "baseline"
+preprocess: "squash"
+
+training:
+  epochs: 25
+  batch_size: 32
+  label_smoothing: 0.0 # matches old config.yaml
+
+selection:
+  metric: "pv_val_macro_f1"
+
+early_stopping:
+  enabled: true
+  patience: 7
+
+sampling:
+  field_fraction: null
+  class_balanced: false

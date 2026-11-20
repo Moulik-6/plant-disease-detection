@@ -1,4 +1,4 @@
-data/
+/data/
 ml/checkpoints/
 *.pth
 __pycache__/
@@ -20,3 +20,7 @@ ml/results/*
 !ml/results/plantdoc/
 ml/results/plantdoc/*
 !ml/results/plantdoc/metrics.json
+!ml/results/plantdoc/analysis.json
+!ml/results/plantdoc/analysis/
+!ml/results/plantdoc/analysis/analysis.json
+

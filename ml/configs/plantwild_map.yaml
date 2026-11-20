@@ -1,0 +1,35 @@
+mapping:
+  "apple scab": {target: "Apple___Apple_scab", confidence: high}
+  "apple black rot": {target: "Apple___Black_rot", confidence: high}
+  "apple rust": {target: "Apple___Cedar_apple_rust", confidence: medium}
+  "apple leaf": {target: "Apple___healthy", confidence: high}
+  "blueberry leaf": {target: "Blueberry___healthy", confidence: high}
+  "cherry leaf": {target: "Cherry_(including_sour)___healthy", confidence: high}
+  "cherry powdery mildew": {target: "Cherry_(including_sour)___Powdery_mildew", confidence: high}
+  "corn gray leaf spot": {target: "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", confidence: high}
+  "corn rust": {target: "Corn_(maize)___Common_rust_", confidence: medium}
+  "corn northern leaf blight": {target: "Corn_(maize)___Northern_Leaf_Blight", confidence: high}
+  "corn leaf": {target: "Corn_(maize)___healthy", confidence: high}
+  "grape black rot": {target: "Grape___Black_rot", confidence: high}
+  "grape leaf": {target: "Grape___healthy", confidence: high}
+  "citrus greening disease": {target: "Orange___Haunglongbing_(Citrus_greening)", confidence: medium}
+  "peach leaf": {target: "Peach___healthy", confidence: high}
+  "bell pepper leaf spot": {target: "Pepper,_bell___Bacterial_spot", confidence: medium}
+  "bell pepper leaf": {target: "Pepper,_bell___healthy", confidence: high}
+  "potato early blight": {target: "Potato___Early_blight", confidence: high}
+  "potato late blight": {target: "Potato___Late_blight", confidence: high}
+  "potato leaf": {target: "Potato___healthy", confidence: high}
+  "raspberry leaf": {target: "Raspberry___healthy", confidence: high}
+  "soybean leaf": {target: "Soybean___healthy", confidence: high}
+  "squash powdery mildew": {target: "Squash___Powdery_mildew", confidence: high}
+  "strawberry leaf": {target: "Strawberry___healthy", confidence: high}
+  "strawberry leaf scorch": {target: "Strawberry___Leaf_scorch", confidence: high}
+  "tomato bacterial leaf spot": {target: "Tomato___Bacterial_spot", confidence: high}
+  "tomato early blight": {target: "Tomato___Early_blight", confidence: high}
+  "tomato leaf": {target: "Tomato___healthy", confidence: high}
+  "tomato late blight": {target: "Tomato___Late_blight", confidence: high}
+  "tomato leaf mold": {target: "Tomato___Leaf_Mold", confidence: high}
+  "tomato septoria leaf spot": {target: "Tomato___Septoria_leaf_spot", confidence: high}
+  "tomato mosaic virus": {target: "Tomato___Tomato_mosaic_virus", confidence: high}
+  "tomato yellow leaf curl virus": {target: "Tomato___Tomato_Yellow_Leaf_Curl_Virus", confidence: high}
+unmapped_policy: other   # all other class folders are kept in the manifest with unified_label "other", not used as the 38 classes

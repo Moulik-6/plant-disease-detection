@@ -1,0 +1,29 @@
+# Experiment B: Mixed Laboratory & Field Training
+# Combines pv_train and field_train with a 50% field-image fraction per batch,
+# using field augmentations and selecting the best checkpoint on field_val_macro_f1.
+
+base: "base.yaml"
+exp_name: "b_mixed"
+
+dataset:
+  train_splits:
+    - "pv_train"
+    - "field_train"
+  val_splits:
+    - "field_val"
+    - "pv_val"
+
+sampling:
+  field_fraction: 0.5 # 50% field images per batch
+  class_balanced: false
+  num_samples: 20000
+
+augmentation: "field"
+
+selection:
+  metric: "field_val_macro_f1"
+
+training:
+  epochs: 25
+  batch_size: 32
+  label_smoothing: 0.1

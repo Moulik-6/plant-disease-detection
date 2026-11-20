@@ -1,0 +1,67 @@
+# Base Experiment Configuration
+# Defines default datasets, models, training parameters, and hardware settings.
+
+exp_name: "base"
+
+# Dataset and Path Configurations
+manifest_path: "data/manifest.csv"
+unified_classes: "ml/configs/labels/unified_classes.yaml"
+sources:
+  plantvillage: "data/plantvillage_dataset/color"
+  plantdoc: "data/plantdoc/PlantDoc-Dataset"
+  plantwild: "data/plantwild/plantwild"
+cache_dir: "data/cache"
+use_cache: true
+
+# Image Preprocessing & Augmentation
+img_size: 224
+preprocess: "squash" # squash | crop
+augmentation: "baseline" # baseline | field
+
+augmentation_cfg:
+  rotation_degrees: 30
+  hflip_prob: 0.5
+  vflip_prob: 0.2
+  color_jitter:
+    brightness: 0.2
+    contrast: 0.2
+    saturation: 0.2
+    hue: 0.05
+
+# Model Architecture (resnet50 | efficientnet_v2_s | vit_b_16)
+model:
+  architecture: "resnet50"
+  pretrained: true
+  dropout: 0.2
+  freeze_backbone: false
+
+# Training Hyperparameters
+training:
+  epochs: 25
+  batch_size: 32
+  learning_rate: 0.0001 # 1e-4 (vit_b_16 defaults to 3e-5)
+  _is_base_learning_rate: true # base-config marker for default learning rate
+  weight_decay: 0.0001
+  label_smoothing: 0.1
+  warmup_epochs: 2
+  min_lr: 0.000001
+  gradient_clip: 1.0
+
+# Sampling Strategy
+sampling:
+  field_fraction: null # float in (0, 1) or null for standard sampling
+  class_balanced: false # inverse-sqrt class frequency balancing
+
+# Selection and Early Stopping
+selection:
+  metric: "field_val_macro_f1"
+
+early_stopping:
+  enabled: true
+  patience: 7
+
+# DataLoader settings (null auto-resolves to 0 on Windows, 6 on Linux)
+dataloader:
+  num_workers: null
+
+seed: 42

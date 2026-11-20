@@ -1,0 +1,39 @@
+# Experiment C: Field Fine-Tuning with Laboratory Replay
+# Initializes backbone from a pre-trained PlantVillage checkpoint (e.g. ml/checkpoints/<name>/best_model.pth),
+# fine-tunes on field_train plus 20% pv_train replay to prevent catastrophic forgetting,
+# with a conservative 3e-5 learning rate and field augmentations.
+
+base: "base.yaml"
+exp_name: "c_finetune"
+
+# Automatically resolves <name> to model architecture (e.g. resnet50, efficientnet_v2, vit)
+init_checkpoint: "ml/checkpoints/<name>/best_model.pth"
+
+dataset:
+  train_splits:
+    - "field_train"
+    - "pv_train"
+  val_splits:
+    - "field_val"
+    - "pv_val"
+
+sampling:
+  # 80% field images, 20% pv_train replay per batch
+  field_fraction: 0.8
+  class_balanced: false
+  num_samples: 20000
+
+augmentation: "field"
+
+selection:
+  metric: "field_val_macro_f1"
+
+training:
+  epochs: 15
+  batch_size: 32
+  learning_rate: 0.00003 # 3e-5 for fine-tuning
+  label_smoothing: 0.1
+
+early_stopping:
+  enabled: true
+  patience: 5

@@ -1,0 +1,34 @@
+# Experiment A (Legacy): PlantVillage Only with Legacy Stratified Splits
+# Uses legacy_split column (train, val, test) computed by stratified_split_indices in ml/src/dataset.py,
+# filtered strictly to plantvillage source records.
+
+base: "base.yaml"
+exp_name: "a_pv_only_legacy"
+
+dataset:
+  split_column: "legacy_split"
+  source_filter:
+    - "plantvillage"
+  train_splits:
+    - "train"
+  val_splits:
+    - "val"
+
+augmentation: "baseline"
+preprocess: "squash"
+
+training:
+  epochs: 25
+  batch_size: 32
+  label_smoothing: 0.0 # matches old config.yaml
+
+selection:
+  metric: "pv_val_macro_f1"
+
+early_stopping:
+  enabled: true
+  patience: 7
+
+sampling:
+  field_fraction: null
+  class_balanced: false
