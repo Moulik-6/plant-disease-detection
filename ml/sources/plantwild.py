@@ -26,7 +26,7 @@ import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import yaml
 
@@ -35,30 +35,46 @@ logger = logging.getLogger(__name__)
 
 def normalize_source_url(raw_url: str) -> str:
     """
-    Normalizes a source URL by stripping its query string and fragment identifier.
-
-    Examples:
-        https://static.inaturalist.org/photos/123/original.jpg?1589 -> https://static.inaturalist.org/photos/123/original.jpg
-        https://example.org/photo#view -> https://example.org/photo
+    Normalizes a source URL:
+      - Lowercase scheme and host
+      - Drop fragment
+      - Strip trailing slash from path
+      - Keep query string, dropping only tracking parameters (utm_*, fbclid, gclid, ref)
+      - Sort remaining query parameters
     """
     if not raw_url or not isinstance(raw_url, str):
         return ""
     clean = raw_url.strip()
     try:
         parsed = urlparse(clean)
-        # Reconstruct URL without query string or fragment
+        scheme = parsed.scheme.lower()
+        netloc = parsed.netloc.lower()
+        path = parsed.path.rstrip("/")
+        params = parsed.params
+
+        filtered_params: List[Tuple[str, str]] = []
+        if parsed.query:
+            for k, v in parse_qsl(parsed.query, keep_blank_values=True):
+                k_lower = k.lower()
+                if k_lower.startswith("utm_") or k_lower in {"fbclid", "gclid", "ref"}:
+                    continue
+                filtered_params.append((k, v))
+            filtered_params.sort(key=lambda x: (x[0], x[1]))
+
+        query = urlencode(filtered_params, doseq=True) if filtered_params else ""
+
         normalized = urlunparse((
-            parsed.scheme.lower(),
-            parsed.netloc.lower(),
-            parsed.path,
-            parsed.params,
-            "",  # strip query string
-            ""   # strip fragment
+            scheme,
+            netloc,
+            path,
+            params,
+            query,
+            ""  # strip fragment
         ))
-        return normalized.rstrip("/")
+        return normalized
     except Exception:
         # Fallback manual extraction
-        return clean.split("?")[0].split("#")[0].strip().rstrip("/")
+        return clean.split("#")[0].strip().rstrip("/")
 
 
 def parse_url_records(record_file: Path) -> Dict[str, Tuple[str, str]]:

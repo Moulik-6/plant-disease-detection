@@ -9,7 +9,7 @@ Scans:
 
 Produces:
   - data/manifest.csv:
-      Columns: path, source, orig_label, unified_label, confidence_level, orig_split, legacy_split, group_id, split
+      Columns: path, source, orig_label, unified_label, confidence_level, orig_split, legacy_split, group_id, split, pv_dup
   - data/manifest_report.json:
       Counts per source, class, and split; duplicate cluster metrics; cross-dataset duplicate pairs;
       official split file listings; URL record group merge audit; 38-class per-split counts;
@@ -18,13 +18,14 @@ Produces:
 Key Design & Soundness Highlights:
   - PlantWild Ingestion: Real adapter for PlantWild v1 using `ml/sources/plantwild.py`. Unmapped folders
     receive unified_label="other" and are placed in the "other_pool" split.
-  - URL Record Deduplication: Uses `data/plantwild/plantwild/url_record.json`. Images sharing the same source URL
-    (or normalized URL minus query string and fragment) are unioned into the same duplicate group alongside pHash.
-  - URL Merge Audit: Formally computes and reports the number of PlantWild groups merged by the URL record.
+  - URL Record Deduplication: Uses `data/plantwild/plantwild/url_record.json`. URL-based union only between
+    images sharing the same orig_label (never cross-label).
+  - URL Merge Audit: Formally computes and reports the number of PlantWild groups merged by the URL record,
+    and counts URL clusters that would have crossed labels without unioning them.
   - Joint Field Clustering: PlantDoc and PlantWild are clustered jointly with 64-bit pHash Union-Find
-    (threshold <= 4) because both were scraped from the web and may share duplicate images.
-  - Cross-Source Leakage Auditing: Directly computes and reports the exact count of PlantDoc-PlantWild
-    duplicate pairs and PlantVillage-field duplicate pairs.
+    (threshold <= 4) strictly within identical unified_label.
+  - PlantVillage-Field Duplicate Isolation: Field images at Hamming distance <= 4 to PlantVillage images
+    are flagged with pv_dup=1 and forced into field_train, exempt from stratified val/test assignment.
   - Group-Stratified Splitting:
       * PlantVillage: 70/15/15 by group (pv_train, pv_val, pv_test), seed=42.
       * Field (PlantDoc + PlantWild): 70/15/15 by group (field_train, field_val, field_test), seed=42.
@@ -226,6 +227,65 @@ def count_cross_dataset_duplicate_pairs(
     return pair_count
 
 
+def audit_pv_field_duplicates_and_flag_matches(
+    pv_hashes: np.ndarray,
+    pdoc_hashes: np.ndarray,
+    pwild_hashes: np.ndarray,
+    threshold: int = 4,
+    chunk_size: int = 2000
+) -> Tuple[int, int, np.ndarray]:
+    """
+    Evaluates near-duplicate pairs between PlantVillage and field images (PlantDoc + PlantWild),
+    and flags which field images have at least one PlantVillage image at Hamming distance <= threshold.
+
+    Returns:
+      (pv_pdoc_pairs, pv_pwild_pairs, field_has_pv_match)
+    """
+    n_pv = len(pv_hashes)
+    n_pdoc = len(pdoc_hashes)
+    n_pwild = len(pwild_hashes)
+    field_hashes = np.concatenate([pdoc_hashes, pwild_hashes], axis=0) if (n_pdoc and n_pwild) else (pdoc_hashes if n_pdoc else pwild_hashes)
+    n_field = len(field_hashes)
+
+    if n_pv == 0 or n_field == 0:
+        return 0, 0, np.zeros(n_field, dtype=bool)
+
+    min_dot_threshold = 64 - 2 * threshold
+    bits_pv = torch.from_numpy(pv_hashes.astype(np.float32) * 2.0 - 1.0)
+    bits_pv_t = bits_pv.T  # (64, N_pv)
+    bits_field = torch.from_numpy(field_hashes.astype(np.float32) * 2.0 - 1.0)  # (N_field, 64)
+
+    field_has_pv_match = np.zeros(n_field, dtype=bool)
+    pv_pdoc_pairs = 0
+    pv_pwild_pairs = 0
+
+    logger.info("Evaluating PlantVillage <-> Field duplicate pairs & flagging PV duplicates (%d x %d comparisons)...", n_field, n_pv)
+    with torch.inference_mode():
+        for r_start in range(0, n_field, chunk_size):
+            r_end = min(r_start + chunk_size, n_field)
+            chunk = bits_field[r_start:r_end]
+            dots = torch.matmul(chunk, bits_pv_t)  # (chunk_len, N_pv)
+
+            match_mask = dots >= min_dot_threshold  # (chunk_len, N_pv)
+            chunk_matches = match_mask.any(dim=1).cpu().numpy()
+            field_has_pv_match[r_start:r_end] = chunk_matches
+
+            if r_start < n_pdoc:
+                pdoc_slice_end = min(r_end, n_pdoc)
+                pv_pdoc_pairs += int(match_mask[:pdoc_slice_end - r_start].sum().item())
+            if r_end > n_pdoc:
+                pwild_slice_start = max(r_start, n_pdoc)
+                pwild_offset = pwild_slice_start - r_start
+                pv_pwild_pairs += int(match_mask[pwild_offset:].sum().item())
+
+    logger.info("PlantVillage <-> Field audit: %d PV-Doc pairs, %d PV-Wild pairs (%d total).",
+                pv_pdoc_pairs, pv_pwild_pairs, pv_pdoc_pairs + pv_pwild_pairs)
+    logger.info("Flagged %d field images with PlantVillage match at Hamming distance <= %d.",
+                int(field_has_pv_match.sum()), threshold)
+
+    return pv_pdoc_pairs, pv_pwild_pairs, field_has_pv_match
+
+
 # ---------------------------------------------------------------------------
 # Dataset Discovery
 # ---------------------------------------------------------------------------
@@ -386,10 +446,11 @@ def assign_group_splits_pv(
     for r in records:
         groups_by_id[r["group_id"]].append(r)
 
-    group_labels: Dict[str, str] = {}
-    for gid, group_records in groups_by_id.items():
-        label_counts = Counter(r["unified_label"] for r in group_records)
-        group_labels[gid] = label_counts.most_common(1)[0][0]
+    # Every group has exactly one unified_label (asserted in clustering integrity check)
+    group_labels: Dict[str, str] = {
+        gid: group_records[0]["unified_label"]
+        for gid, group_records in groups_by_id.items()
+    }
 
     groups_by_label: Dict[str, List[str]] = defaultdict(list)
     for gid, label in group_labels.items():
@@ -447,36 +508,57 @@ def assign_group_splits_field(
     train_ratio: float = 0.70,
     val_ratio: float = 0.15,
     seed: int = 42
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], Dict[str, int]]:
     """
     Assigns field splits across combined PlantDoc and PlantWild records.
-    - Groups with majority label 'other' are assigned strictly to 'other_pool' (never field_test).
+    - Groups with unified_label 'other' are assigned strictly to 'other_pool' (never field_test).
+    - Groups containing at least one pv_dup image are forced into field_train, exempt from val/test stratification.
     - Remaining groups (38 classes) are split 70/15/15 into field_train, field_val, field_test (seed=42).
-    - Classes with fewer than 5 groups are assigned entirely to field_train.
+    - Classes with fewer than 5 remaining groups are assigned entirely to field_train.
     """
     groups_by_id: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     for r in records:
         groups_by_id[r["group_id"]].append(r)
 
-    group_labels: Dict[str, str] = {}
-    for gid, group_records in groups_by_id.items():
-        label_counts = Counter(r["unified_label"] for r in group_records)
-        group_labels[gid] = label_counts.most_common(1)[0][0]
+    # Every group has exactly one unified_label (asserted in clustering integrity check)
+    group_labels: Dict[str, str] = {
+        gid: group_records[0]["unified_label"]
+        for gid, group_records in groups_by_id.items()
+    }
 
     group_split_assignment: Dict[str, str] = {}
     tiny_classes_report: List[Dict[str, Any]] = []
 
     # 1. Handle 'other' groups -> 'other_pool'
-    groups_38_by_label: Dict[str, List[str]] = defaultdict(list)
     for gid, label in group_labels.items():
         if label == "other":
             group_split_assignment[gid] = "other_pool"
-        else:
-            groups_38_by_label[label].append(gid)
 
-    # 2. Stratify the 38 classes across field_train, field_val, field_test
-    for label in sorted(groups_38_by_label.keys()):
-        gids = sorted(groups_38_by_label[label])
+    # 2. Force groups containing at least one pv_dup image into field_train
+    # (exempt from the stratified val/test assignment)
+    forced_pv_dup_groups = 0
+    forced_pv_dup_images = 0
+
+    for gid, group_records in groups_by_id.items():
+        label = group_labels[gid]
+        if label != "other" and any(r.get("pv_dup", 0) == 1 for r in group_records):
+            group_split_assignment[gid] = "field_train"
+            forced_pv_dup_groups += 1
+            forced_pv_dup_images += len(group_records)
+
+    logger.info(
+        "PV-Field Duplicate Isolation: Forced %d groups (%d images) with pv_dup=1 into field_train (exempt from val/test).",
+        forced_pv_dup_groups, forced_pv_dup_images
+    )
+
+    # 3. Stratify the remaining groups of the 38 classes across field_train, field_val, field_test
+    remaining_groups_by_label: Dict[str, List[str]] = defaultdict(list)
+    for gid, label in group_labels.items():
+        if gid not in group_split_assignment:
+            remaining_groups_by_label[label].append(gid)
+
+    for label in sorted(remaining_groups_by_label.keys()):
+        gids = sorted(remaining_groups_by_label[label])
         rng = random.Random(seed)
         rng.shuffle(gids)
 
@@ -492,7 +574,7 @@ def assign_group_splits_field(
                 "group_count": n_groups,
                 "image_count": total_images,
                 "assigned_split": "field_train",
-                "reason": "Fewer than 5 groups; assigned to field_train only."
+                "reason": "Fewer than 5 remaining groups; assigned to field_train only."
             })
         else:
             n_train = int(n_groups * train_ratio)
@@ -516,7 +598,11 @@ def assign_group_splits_field(
     for r in records:
         r["split"] = group_split_assignment[r["group_id"]]
 
-    return records, tiny_classes_report
+    forced_stats = {
+        "forced_groups_count": forced_pv_dup_groups,
+        "forced_images_count": forced_pv_dup_images
+    }
+    return records, tiny_classes_report, forced_stats
 
 
 # ---------------------------------------------------------------------------
@@ -583,7 +669,7 @@ def build_manifest(
     pwild_hashes = load_or_compute_hashes(pwild_records, cache_pwild_hashes, "PlantWild")
 
     # -----------------------------------------------------------------------
-    # 3. Cross-Dataset Near-Duplicate Pair Auditing
+    # 3. Cross-Dataset Near-Duplicate Pair Auditing & PV-Field Match Flagging
     # -----------------------------------------------------------------------
     field_hashes = np.concatenate([pdoc_hashes, pwild_hashes], axis=0) if (len(pdoc_hashes) and len(pwild_hashes)) else (pdoc_hashes if len(pdoc_hashes) else pwild_hashes)
 
@@ -592,12 +678,12 @@ def build_manifest(
         pdoc_hashes, pwild_hashes, threshold=threshold, desc="PlantDoc <-> PlantWild"
     )
 
-    # (b) PlantVillage - Field Duplicate Pairs
-    pv_pdoc_dup_pairs = count_cross_dataset_duplicate_pairs(
-        pv_hashes, pdoc_hashes, threshold=threshold, desc="PlantVillage <-> PlantDoc"
-    )
-    pv_pwild_dup_pairs = count_cross_dataset_duplicate_pairs(
-        pv_hashes, pwild_hashes, threshold=threshold, desc="PlantVillage <-> PlantWild"
+    # (b) PlantVillage - Field Duplicate Pairs & PV-Field Match Flagging
+    pv_pdoc_dup_pairs, pv_pwild_dup_pairs, field_has_pv_match = audit_pv_field_duplicates_and_flag_matches(
+        pv_hashes=pv_hashes,
+        pdoc_hashes=pdoc_hashes,
+        pwild_hashes=pwild_hashes,
+        threshold=threshold
     )
     pv_field_dup_pairs = pv_pdoc_dup_pairs + pv_pwild_dup_pairs
 
@@ -607,6 +693,23 @@ def build_manifest(
     logger.info("  - PlantVillage <-> Field duplicate pairs: %d (PlantDoc: %d, PlantWild: %d)",
                 pv_field_dup_pairs, pv_pdoc_dup_pairs, pv_pwild_dup_pairs)
     logger.info("=" * 80)
+
+    # Flag pv_dup (0/1): field image whose unified_label is not "other" and has PV match
+    for r in pv_records:
+        r["pv_dup"] = 0
+
+    field_records = pdoc_records + pwild_records
+    for idx, r in enumerate(field_records):
+        if r["unified_label"] != "other" and bool(field_has_pv_match[idx]):
+            r["pv_dup"] = 1
+        else:
+            r["pv_dup"] = 0
+
+    total_pv_dup_field_images = sum(r["pv_dup"] for r in field_records)
+    logger.info(
+        "Flagged %d field images as pv_dup=1 (unified_label != 'other' and Hamming distance <= %d to PlantVillage).",
+        total_pv_dup_field_images, threshold
+    )
 
     # -----------------------------------------------------------------------
     # 4. Clustering & Group Assignment
@@ -629,7 +732,6 @@ def build_manifest(
 
     # Field Data: Clustered JOINTLY across PlantDoc and PlantWild
     logger.info("Clustering Field duplicates JOINTLY across PlantDoc and PlantWild (%d total images)...", len(field_hashes))
-    field_records = pdoc_records + pwild_records
     n_field = len(field_records)
     n_pdoc = len(pdoc_records)
     pwild_field_indices = range(n_pdoc, n_field)
@@ -665,7 +767,7 @@ def build_manifest(
     num_pwild_groups_before = len(pwild_groups_before)
 
     # 4c. URL Record Merge: Force images sharing identical normalized source URLs into same group
-    # URL unions remain allowed across labels; cross-label URL merges are tracked and reported.
+    # URL-based union ONLY between images with the same orig_label. Never union across labels by URL.
     logger.info("Applying URL record deduplication from: %s", url_record_file)
     url_to_field_indices: Dict[str, List[int]] = defaultdict(list)
     images_with_url = 0
@@ -678,23 +780,24 @@ def build_manifest(
 
     multi_image_url_clusters = 0
     cross_label_url_clusters = 0
-    cross_label_url_merges = 0
 
     for norm_url, indices in url_to_field_indices.items():
         if len(indices) > 1:
             multi_image_url_clusters += 1
-            labels_in_url = set(field_records[i]["unified_label"] for i in indices)
-            if len(labels_in_url) > 1:
+            orig_labels = set(field_records[i]["orig_label"] for i in indices)
+            if len(orig_labels) > 1:
                 cross_label_url_clusters += 1
 
-            first_idx = indices[0]
-            for other_idx in indices[1:]:
-                root_a = field_uf.find(first_idx)
-                root_b = field_uf.find(other_idx)
-                if root_a != root_b:
-                    if field_records[first_idx]["unified_label"] != field_records[other_idx]["unified_label"]:
-                        cross_label_url_merges += 1
-                    field_uf.union(first_idx, other_idx)
+            # Group indices by orig_label: union ONLY within the same orig_label
+            by_orig_label: Dict[str, List[int]] = defaultdict(list)
+            for i in indices:
+                by_orig_label[field_records[i]["orig_label"]].append(i)
+
+            for same_label_indices in by_orig_label.values():
+                if len(same_label_indices) > 1:
+                    first_idx = same_label_indices[0]
+                    for other_idx in same_label_indices[1:]:
+                        field_uf.union(first_idx, other_idx)
 
     # 4d. Record PlantWild group count AFTER URL Record Merge
     pwild_groups_after = set(field_uf.find(i) for i in pwild_field_indices)
@@ -706,8 +809,8 @@ def build_manifest(
         num_pwild_groups_before, num_pwild_groups_after, pwild_groups_merged
     )
     logger.info(
-        "Cross-Label URL Merges: %d URLs span multiple labels (%d pairwise cross-label unions performed).",
-        cross_label_url_clusters, cross_label_url_merges
+        "Cross-Label URL Audit: %d URL clusters would have crossed orig_labels (count only, no cross-label union performed).",
+        cross_label_url_clusters
     )
 
     # Finalize Field group_ids
@@ -724,6 +827,33 @@ def build_manifest(
     for idx, r in enumerate(field_records):
         r["group_id"] = field_root_to_group[field_root_ids[idx]]
 
+    # 4e. Assert that every duplicate group has exactly one unified_label
+    logger.info("Asserting that every duplicate group has exactly one unified_label...")
+    group_to_unified_labels: Dict[str, Set[str]] = defaultdict(set)
+    for r in pv_records + field_records:
+        group_to_unified_labels[r["group_id"]].add(r["unified_label"])
+
+    multi_label_groups = {
+        gid: sorted(list(labels))
+        for gid, labels in group_to_unified_labels.items()
+        if len(labels) != 1
+    }
+    if multi_label_groups:
+        offending_lines = "\n".join(
+            f"  - Group '{gid}': unified_labels={labels}"
+            for gid, labels in sorted(multi_label_groups.items())[:20]
+        )
+        extra = f"\n  ... and {len(multi_label_groups) - 20} more." if len(multi_label_groups) > 20 else ""
+        error_msg = (
+            f"ABORT: Group label integrity assertion failed! Found {len(multi_label_groups)} duplicate group(s) "
+            f"containing multiple unified_labels:\n"
+            f"{offending_lines}{extra}"
+        )
+        logger.error(error_msg)
+        raise AssertionError(error_msg)
+    else:
+        logger.info("[PASS] Verified: Every duplicate group across all sources has exactly one unified_label.")
+
     # -----------------------------------------------------------------------
     # 5. Group-Based Split Assignment
     # -----------------------------------------------------------------------
@@ -731,13 +861,13 @@ def build_manifest(
     pv_records, pv_tiny = assign_group_splits_pv(pv_records, seed=seed)
 
     logger.info("Assigning Field group splits (field_train, field_val, field_test, and other_pool)...")
-    field_records, field_tiny = assign_group_splits_field(field_records, seed=seed)
+    field_records, field_tiny, pv_dup_forced_stats = assign_group_splits_field(field_records, seed=seed)
 
     all_records = pv_records + field_records
     all_tiny_reports = pv_tiny + field_tiny
 
     # -----------------------------------------------------------------------
-    # 6. Verification: Verify No group_id Crosses Splits & Check Cluster Sizes
+    # 6. Verification: Verify No group_id Crosses Splits & other_pool Exclusivity
     # -----------------------------------------------------------------------
     group_to_splits: Dict[str, Set[str]] = defaultdict(set)
     all_clusters_by_gid: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
@@ -754,22 +884,43 @@ def build_manifest(
     else:
         logger.info("[PASS] Verified that zero group_ids cross split boundaries (100%% group isolation).")
 
+    # Assert that other_pool contains only images with unified_label "other"
+    non_other_in_pool = [
+        r for r in all_records
+        if r["split"] == "other_pool" and r["unified_label"] != "other"
+    ]
+    if non_other_in_pool:
+        error_msg = (
+            f"ABORT: other_pool integrity assertion failed! Found {len(non_other_in_pool)} image(s) with non-'other' "
+            f"unified_label in other_pool. Examples: {[r['path'] for r in non_other_in_pool[:5]]}"
+        )
+        logger.error(error_msg)
+        raise AssertionError(error_msg)
+    else:
+        logger.info("[PASS] Verified: other_pool contains exclusively images with unified_label='other'.")
+
     # Cluster Size and Multi-label Audit
     cluster_sizes = [len(m) for m in all_clusters_by_gid.values()]
     max_cluster_size = max(cluster_sizes) if cluster_sizes else 0
 
-    # 10 largest clusters with size and label counts
+    # 20 largest clusters with size and label
     sorted_clusters = sorted(all_clusters_by_gid.items(), key=lambda kv: len(kv[1]), reverse=True)
-    ten_largest_clusters: List[Dict[str, Any]] = []
-    for gid, members in sorted_clusters[:10]:
-        label_cts = dict(Counter(r["unified_label"] for r in members))
-        ten_largest_clusters.append({
+    twenty_largest_clusters: List[Dict[str, Any]] = []
+    for gid, members in sorted_clusters[:20]:
+        twenty_largest_clusters.append({
             "group_id": gid,
             "size": len(members),
+            "unified_label": members[0]["unified_label"],
             "sources": sorted(list(set(r["source"] for r in members))),
-            "label_counts": label_cts,
-            "contains_more_than_one_label": len(label_cts) > 1
         })
+
+    # Print the five largest clusters with sizes to the console
+    print("=" * 60)
+    print("FIVE LARGEST CLUSTERS:")
+    for rank, (gid, members) in enumerate(sorted_clusters[:5], 1):
+        lbl = members[0]["unified_label"]
+        print(f"  [{rank}] Group '{gid}': size={len(members)}, label='{lbl}'")
+    print("=" * 60)
 
     num_clusters_more_than_one_label = sum(
         1 for members in all_clusters_by_gid.values() if len(set(r["unified_label"] for r in members)) > 1
@@ -807,7 +958,8 @@ def build_manifest(
         "orig_split",
         "legacy_split",
         "group_id",
-        "split"
+        "split",
+        "pv_dup"
     ]
 
     logger.info("Writing manifest CSV to: %s", out_manifest_path)
@@ -889,7 +1041,8 @@ def build_manifest(
         "total_records": len(all_records),
         "maximum_cluster_size": max_cluster_size,
         "clusters_containing_more_than_one_label_count": num_clusters_more_than_one_label,
-        "ten_largest_clusters": ten_largest_clusters,
+        "ten_largest_clusters": twenty_largest_clusters[:10],
+        "twenty_largest_clusters": twenty_largest_clusters,
         "counts_by_source": counts_by_source,
         "counts_by_split": counts_by_split,
         "cross_dataset_duplicate_pairs": {
@@ -900,6 +1053,11 @@ def build_manifest(
                 "plantvillage_plantwild_pairs": pv_pwild_dup_pairs
             }
         },
+        "pv_dup_isolation": {
+            "total_pv_dup_field_images": total_pv_dup_field_images,
+            "forced_groups_to_field_train": pv_dup_forced_stats["forced_groups_count"],
+            "forced_images_to_field_train": pv_dup_forced_stats["forced_images_count"]
+        },
         "url_record_deduplication": {
             "url_record_path": str(url_file_resolved) if url_file_resolved else None,
             "url_record_found": url_record_exists,
@@ -907,7 +1065,6 @@ def build_manifest(
             "unique_normalized_urls_count": len(url_to_field_indices),
             "multi_image_url_clusters_count": multi_image_url_clusters,
             "cross_label_url_clusters_count": cross_label_url_clusters,
-            "cross_label_url_merges_count": cross_label_url_merges,
             "plantwild_groups_before_url_merge": num_pwild_groups_before,
             "plantwild_groups_after_url_merge": num_pwild_groups_after,
             "plantwild_groups_merged": pwild_groups_merged
@@ -915,7 +1072,8 @@ def build_manifest(
         "duplicate_clusters": {
             "maximum_cluster_size": max_cluster_size,
             "clusters_containing_more_than_one_label_count": num_clusters_more_than_one_label,
-            "ten_largest_clusters": ten_largest_clusters,
+            "ten_largest_clusters": twenty_largest_clusters[:10],
+            "twenty_largest_clusters": twenty_largest_clusters,
             "plantvillage": {
                 "total_images": len(pv_records),
                 "total_groups": len(pv_cluster_members),
@@ -940,6 +1098,14 @@ def build_manifest(
             "violating_groups_count": len(violating_groups),
             "violating_groups": violating_groups
         },
+        "check_other_pool_only_contains_other": {
+            "passed": len(non_other_in_pool) == 0,
+            "non_other_images_count": len(non_other_in_pool)
+        },
+        "check_every_group_has_single_unified_label": {
+            "passed": len(multi_label_groups) == 0,
+            "multi_label_groups_count": len(multi_label_groups)
+        },
         "tiny_classes_assigned_to_train_only": all_tiny_reports,
         "per_class_counts_38_classes": per_class_counts_38,
         "counts_by_source_class_and_split": counts_by_source_class_split
@@ -955,6 +1121,8 @@ def build_manifest(
     logger.info("  - PlantVillage:    %d", len(pv_records))
     logger.info("  - Field (Doc+Wild):%d (Other Pool: %d)", len(field_records), counts_by_split.get("other_pool", 0))
     logger.info("  - PW Groups Merged via URL: %d", pwild_groups_merged)
+    logger.info("  - PV-Field Duplicates Forced to field_train: %d groups (%d images)",
+                pv_dup_forced_stats["forced_groups_count"], pv_dup_forced_stats["forced_images_count"])
     logger.info("  - Manifest SHA256: %s", manifest_sha256)
     logger.info("=" * 80)
 

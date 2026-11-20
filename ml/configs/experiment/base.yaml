@@ -46,6 +46,7 @@ training:
   warmup_epochs: 2
   min_lr: 0.000001
   gradient_clip: 1.0
+  channels_last: "auto" # true | false | auto (auto: false for efficientnet, true otherwise)
 
 # Sampling Strategy
 sampling:

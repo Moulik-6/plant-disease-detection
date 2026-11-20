@@ -150,6 +150,26 @@ def load_inherited_config(config_path: Union[str, Path]) -> Dict[str, Any]:
     return cfg
 
 
+def resolve_channels_last(cfg_val: Any, architecture: str) -> bool:
+    """
+    Resolves channels_last setting from config (true, false, or "auto").
+    "auto" resolves to:
+      - False when architecture starts with "efficientnet" (bf16 + channels_last fails in cuDNN on this torch build)
+      - True otherwise.
+    """
+    if isinstance(cfg_val, str):
+        v = cfg_val.lower().strip()
+        if v == "auto":
+            return not architecture.startswith("efficientnet")
+        if v in ("true", "1", "yes"):
+            return True
+        if v in ("false", "0", "no"):
+            return False
+    elif isinstance(cfg_val, bool):
+        return cfg_val
+    return not architecture.startswith("efficientnet")
+
+
 def build_transforms(config: Dict[str, Any]) -> Tuple[transforms.Compose, transforms.Compose]:
     """
     Builds training and evaluation transforms based on:
@@ -272,6 +292,7 @@ def evaluate_split(
     criterion: nn.Module,
     device: torch.device,
     use_cuda: bool,
+    channels_last: bool = False,
     smoke: bool = False
 ) -> Tuple[float, float, float, int]:
     """
@@ -290,7 +311,7 @@ def evaluate_split(
             if smoke and batch_idx >= 20:
                 break
 
-            if images.dim() == 4 and use_cuda:
+            if images.dim() == 4 and use_cuda and channels_last:
                 images = images.to(device, memory_format=torch.channels_last, non_blocking=True)
             else:
                 images = images.to(device, non_blocking=True)
@@ -332,6 +353,8 @@ def run_self_check() -> int:
     Self-check test: builds model for each architecture (resnet50, efficientnet_v2_s, vit_b_16),
     saves a tiny best.pth to a temp folder with the required config schema, and loads it back
     with load_model_and_classes from ml/gradcam.py, printing PASS or FAIL for each.
+    Also executes a one-batch training step for each architecture on CUDA when available
+    (bf16 autocast with the resolved channels_last setting, forward, backward, optimizer step).
     """
     import tempfile
 
@@ -343,6 +366,7 @@ def run_self_check() -> int:
     architectures = ["resnet50", "efficientnet_v2_s", "vit_b_16"]
     class_to_idx = load_unified_class_to_idx()
     num_classes = len(class_to_idx)
+    cuda_available = torch.cuda.is_available()
 
     all_passed = True
     print("=" * 60)
@@ -393,6 +417,36 @@ def run_self_check() -> int:
                 assert loaded_model is not None, "Model failed to instantiate"
                 assert loaded_arch.lower() == arch.lower(), f"Arch mismatch: expected {arch}, got {loaded_arch}"
                 assert len(loaded_c2i) == num_classes, f"Class count mismatch: expected {num_classes}, got {len(loaded_c2i)}"
+
+            # 3. One-batch training step on CUDA when available
+            if cuda_available:
+                use_cl = resolve_channels_last("auto", arch)
+                device = torch.device("cuda")
+                if use_cl:
+                    model = model.to(memory_format=torch.channels_last)
+                model = model.to(device)
+                model.train()
+
+                dummy_images = torch.randn(2, 3, 224, 224, device=device)
+                if use_cl:
+                    dummy_images = dummy_images.to(memory_format=torch.channels_last)
+                dummy_targets = torch.tensor([0, 1 % num_classes], device=device, dtype=torch.long)
+
+                opt = torch.optim.AdamW(model.parameters(), lr=1e-4)
+                crit = nn.CrossEntropyLoss()
+                opt.zero_grad(set_to_none=True)
+
+                with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+                    out = model(dummy_images)
+                    loss = crit(out, dummy_targets)
+
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                opt.step()
+
+                del dummy_images, dummy_targets, opt, crit
+                model = model.to("cpu")
+                torch.cuda.empty_cache()
 
             print(f"[{arch}] Self-check: PASS")
         except Exception as e:
@@ -477,6 +531,11 @@ def main():
     model_cfg = config.get("model", {})
     architecture = str(model_cfg.get("architecture", "resnet50")).lower().strip()
     training_cfg = config.get("training", {})
+
+    raw_channels_last = training_cfg.get("channels_last", "auto")
+    use_channels_last = resolve_channels_last(raw_channels_last, architecture)
+    logger.info("Resolved channels_last: %s (config: %s, architecture: %s)",
+                use_channels_last, raw_channels_last, architecture)
 
     # Detect whether learning_rate is explicit: only if in child config or in --set
     has_explicit_lr_in_child = (
@@ -639,7 +698,7 @@ def main():
             logger.warning("Requested init_checkpoint not found on disk: %s", init_path)
 
     # channels_last memory format
-    if use_cuda:
+    if use_cuda and use_channels_last:
         model = model.to(memory_format=torch.channels_last)
     model = model.to(device)
 
@@ -663,12 +722,16 @@ def main():
     )
 
     # 9. Output Directory Setup
-    exp_name = config.get("exp_name") or Path(args.exp or "resumed_exp").stem
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir = Path("runs") / exp_name / timestamp
-    run_dir.mkdir(parents=True, exist_ok=True)
-
-    logger.info("Run directory initialized: %s", run_dir.resolve())
+    if resume_path:
+        run_dir = resume_path.parent
+        exp_name = config.get("exp_name") or run_dir.parent.name
+        logger.info("Resuming run in existing directory: %s", run_dir.resolve())
+    else:
+        exp_name = config.get("exp_name") or Path(args.exp or "resumed_exp").stem
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        run_dir = Path("runs") / exp_name / timestamp
+        run_dir.mkdir(parents=True, exist_ok=True)
+        logger.info("Run directory initialized: %s", run_dir.resolve())
 
     # Save resolved config.yaml
     with open(run_dir / "config.yaml", "w", encoding="utf-8") as f:
@@ -681,17 +744,20 @@ def main():
 
     # CSV Logger
     log_csv_path = run_dir / "log.csv"
+    write_header = not log_csv_path.exists()
     csv_headers = ["epoch", "lr", "train_loss", "train_acc", "distinct_field_images"]
     for v_split in val_splits:
         csv_headers.extend([f"{v_split}_loss", f"{v_split}_acc", f"{v_split}_macro_f1"])
     csv_headers.append("epoch_time_sec")
 
-    with open(log_csv_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(csv_headers)
+    if write_header:
+        with open(log_csv_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(csv_headers)
 
     # 10. Resume State Restoration
     start_epoch = 0
+    resumed_from_epoch: Optional[int] = None
     best_metric = -float("inf")
     best_epoch = 0
     best_snapshot: Dict[str, Any] = {}
@@ -702,18 +768,48 @@ def main():
         model.load_state_dict(ckpt_full["model_state_dict"])
         optimizer.load_state_dict(ckpt_full["optimizer_state_dict"])
         scheduler.load_state_dict(ckpt_full["scheduler_state_dict"])
-        start_epoch = ckpt_full.get("epoch", 0) + 1
+        resumed_from_epoch = int(ckpt_full.get("epoch", 0))
+        start_epoch = resumed_from_epoch + 1
         best_metric = ckpt_full.get("best_metric", -float("inf"))
         best_epoch = ckpt_full.get("best_epoch", 0)
 
+        # Restore previous best_snapshot from metrics.json if available
+        if (run_dir / "metrics.json").exists():
+            try:
+                with open(run_dir / "metrics.json", "r", encoding="utf-8") as f:
+                    prev_metrics = json.load(f)
+                    if "best_epoch_metrics" in prev_metrics:
+                        best_snapshot = prev_metrics["best_epoch_metrics"]
+            except Exception:
+                pass
+
         # RNG restore
-        if "torch_rng" in ckpt_full:
-            torch.set_rng_state(ckpt_full["torch_rng"])
+        if "torch_rng" in ckpt_full and ckpt_full["torch_rng"] is not None:
+            try:
+                torch_rng = ckpt_full["torch_rng"]
+                if isinstance(torch_rng, torch.Tensor):
+                    torch.set_rng_state(torch_rng.cpu().to(torch.uint8))
+                else:
+                    torch.set_rng_state(torch_rng)
+            except Exception as e:
+                logger.warning("Failed to restore torch RNG state: %s", e)
+
         if use_cuda and "cuda_rng" in ckpt_full and ckpt_full["cuda_rng"] is not None:
-            torch.cuda.set_rng_state_all(ckpt_full["cuda_rng"])
-        if "numpy_rng" in ckpt_full:
+            try:
+                cuda_rng = ckpt_full["cuda_rng"]
+                if isinstance(cuda_rng, (list, tuple)) and len(cuda_rng) > 0:
+                    torch.cuda.set_rng_state(cuda_rng[0].cpu().to(torch.uint8))
+                elif isinstance(cuda_rng, torch.Tensor):
+                    torch.cuda.set_rng_state(cuda_rng.cpu().to(torch.uint8))
+                else:
+                    torch.cuda.set_rng_state(cuda_rng)
+            except Exception as e:
+                logger.warning("Failed to restore CUDA RNG state: %s", e)
+
+        if "numpy_rng" in ckpt_full and ckpt_full["numpy_rng"] is not None:
             np.random.set_state(ckpt_full["numpy_rng"])
-        if "python_rng" in ckpt_full:
+
+        if "python_rng" in ckpt_full and ckpt_full["python_rng"] is not None:
             random.setstate(ckpt_full["python_rng"])
 
     # 11. Early Stopping and Selection Configuration
@@ -727,9 +823,11 @@ def main():
                 selection_metric, early_stop_enabled, patience)
 
     run_start_time = time.time()
+    last_trained_epoch = start_epoch
 
     # 12. Main Training Loop
     for epoch in range(start_epoch, total_epochs):
+        last_trained_epoch = epoch + 1
         epoch_t0 = time.time()
         model.train()
 
@@ -749,7 +847,7 @@ def main():
                 if r_idx < len(train_dataset.is_field) and train_dataset.is_field[r_idx]:
                     distinct_field_indices.add(r_idx)
 
-            if images.dim() == 4 and use_cuda:
+            if images.dim() == 4 and use_cuda and use_channels_last:
                 images = images.to(device, memory_format=torch.channels_last, non_blocking=True)
             else:
                 images = images.to(device, non_blocking=True)
@@ -797,6 +895,7 @@ def main():
                 criterion=criterion,
                 device=device,
                 use_cuda=use_cuda,
+                channels_last=use_channels_last,
                 smoke=args.smoke
             )
             epoch_metrics[f"{v_split}_loss"] = v_loss
@@ -860,7 +959,7 @@ def main():
             "config": ckpt_config,
             "full_config": config,
             "torch_rng": torch.get_rng_state(),
-            "cuda_rng": torch.cuda.get_rng_state_all() if use_cuda else None,
+            "cuda_rng": torch.cuda.get_rng_state() if use_cuda else None,
             "numpy_rng": np.random.get_state(),
             "python_rng": random.getstate(),
         }
@@ -911,11 +1010,14 @@ def main():
         "best_epoch": best_epoch,
         "best_metric_value": best_metric,
         "best_epoch_metrics": best_snapshot,
-        "total_epochs_trained": epoch + 1,
+        "total_epochs_trained": last_trained_epoch,
         "total_training_time_sec": total_training_time,
         "smoke": args.smoke,
-        "git_commit": git_hash
+        "git_commit": git_hash,
     }
+    if resumed_from_epoch is not None:
+        final_metrics["resumed_from_epoch"] = resumed_from_epoch
+
     with open(run_dir / "metrics.json", "w", encoding="utf-8") as f:
         json.dump(final_metrics, f, indent=2)
 
