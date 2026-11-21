@@ -6,7 +6,7 @@ Features:
   - CLI: python ml/train_exp.py --exp ml/configs/experiment/<name>.yaml [--set a.b=c ...] [--resume runs/<dir>] [--smoke]
   - Config inheritance via a `base:` key using `deep_update` from ml/src/utils.py (resolved config saved)
   - Hardware Acceleration:
-      * bf16 autocast on CUDA with no GradScaler
+      * precision: auto | fp16 | bf16 | fp32 (auto: fp16 on CUDA with GradScaler, fp32 on CPU)
       * channels_last memory format
       * TF32 enabled (matmul & cuDNN)
   - Optimizer & Scheduler:
@@ -170,6 +170,26 @@ def resolve_channels_last(cfg_val: Any, architecture: str) -> bool:
     return not architecture.startswith("efficientnet")
 
 
+def resolve_precision(raw_precision: Any, use_cuda: bool) -> str:
+    """
+    Resolves training precision:
+      - 'auto' -> 'fp16' on CUDA, 'fp32' on CPU
+      - 'fp16' -> 'fp16'
+      - 'bf16' -> 'bf16'
+      - 'fp32' -> 'fp32'
+    """
+    val = str(raw_precision).lower().strip() if raw_precision is not None else "auto"
+    if val == "auto":
+        return "fp16" if use_cuda else "fp32"
+    if val in ("fp16", "float16", "half"):
+        return "fp16"
+    if val in ("bf16", "bfloat16"):
+        return "bf16"
+    if val in ("fp32", "float32"):
+        return "fp32"
+    raise ValueError(f"Unknown training.precision '{raw_precision}'. Allowed: auto, fp16, bf16, fp32")
+
+
 def build_transforms(config: Dict[str, Any]) -> Tuple[transforms.Compose, transforms.Compose]:
     """
     Builds training and evaluation transforms based on:
@@ -293,7 +313,8 @@ def evaluate_split(
     device: torch.device,
     use_cuda: bool,
     channels_last: bool = False,
-    smoke: bool = False
+    smoke: bool = False,
+    precision: str = "bf16",
 ) -> Tuple[float, float, float, int]:
     """
     Evaluates model on a DataLoader.
@@ -317,11 +338,15 @@ def evaluate_split(
                 images = images.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
 
-            with torch.autocast(
-                device_type="cuda" if use_cuda else "cpu",
-                dtype=torch.bfloat16,
-                enabled=use_cuda
-            ):
+            if precision == "fp16":
+                with torch.autocast(device_type="cuda" if use_cuda else "cpu", dtype=torch.float16, enabled=True):
+                    outputs = model(images)
+                    loss = criterion(outputs, targets)
+            elif precision == "bf16":
+                with torch.autocast(device_type="cuda" if use_cuda else "cpu", dtype=torch.bfloat16, enabled=use_cuda):
+                    outputs = model(images)
+                    loss = criterion(outputs, targets)
+            else:  # fp32
                 outputs = model(images)
                 loss = criterion(outputs, targets)
 
@@ -348,13 +373,13 @@ def evaluate_split(
     return avg_loss, float(acc), float(macro_f1), classes_covered
 
 
-def run_self_check() -> int:
+def run_self_check(raw_precision: str = "auto") -> int:
     """
     Self-check test: builds model for each architecture (resnet50, efficientnet_v2_s, vit_b_16),
     saves a tiny best.pth to a temp folder with the required config schema, and loads it back
     with load_model_and_classes from ml/gradcam.py, printing PASS or FAIL for each.
     Also executes a one-batch training step for each architecture on CUDA when available
-    (bf16 autocast with the resolved channels_last setting, forward, backward, optimizer step).
+    using the resolved precision (and scaler for fp16), forward, backward, optimizer step.
     """
     import tempfile
 
@@ -367,10 +392,11 @@ def run_self_check() -> int:
     class_to_idx = load_unified_class_to_idx()
     num_classes = len(class_to_idx)
     cuda_available = torch.cuda.is_available()
+    check_precision = resolve_precision(raw_precision, cuda_available)
 
     all_passed = True
     print("=" * 60)
-    print("RUNNING SELF-CHECK: Model Building & Grad-CAM Checkpoint Compatibility")
+    print(f"RUNNING SELF-CHECK: Model Building & Grad-CAM Checkpoint Compatibility (precision={check_precision})")
     print("=" * 60)
 
     for arch in architectures:
@@ -418,7 +444,7 @@ def run_self_check() -> int:
                 assert loaded_arch.lower() == arch.lower(), f"Arch mismatch: expected {arch}, got {loaded_arch}"
                 assert len(loaded_c2i) == num_classes, f"Class count mismatch: expected {num_classes}, got {len(loaded_c2i)}"
 
-            # 3. One-batch training step on CUDA when available
+            # 3. One-batch training step on CUDA when available using resolved precision and scaler
             if cuda_available:
                 use_cl = resolve_channels_last("auto", arch)
                 device = torch.device("cuda")
@@ -436,15 +462,32 @@ def run_self_check() -> int:
                 crit = nn.CrossEntropyLoss()
                 opt.zero_grad(set_to_none=True)
 
-                with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+                scaler = torch.amp.GradScaler("cuda") if check_precision == "fp16" else None
+
+                if check_precision == "fp16":
+                    with torch.autocast(device_type="cuda", dtype=torch.float16):
+                        out = model(dummy_images)
+                        loss = crit(out, dummy_targets)
+                elif check_precision == "bf16":
+                    with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+                        out = model(dummy_images)
+                        loss = crit(out, dummy_targets)
+                else:  # fp32
                     out = model(dummy_images)
                     loss = crit(out, dummy_targets)
 
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                opt.step()
+                if scaler is not None:
+                    scaler.scale(loss).backward()
+                    scaler.unscale_(opt)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    scaler.step(opt)
+                    scaler.update()
+                else:
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    opt.step()
 
-                del dummy_images, dummy_targets, opt, crit
+                del dummy_images, dummy_targets, opt, crit, scaler
                 model = model.to("cpu")
                 torch.cuda.empty_cache()
 
@@ -493,7 +536,12 @@ def main():
     args = parser.parse_args()
 
     if args.self_check:
-        sys.exit(run_self_check())
+        prec_arg = "auto"
+        if args.set:
+            for item in args.set:
+                if item.startswith("training.precision="):
+                    prec_arg = item.split("=", 1)[1]
+        sys.exit(run_self_check(raw_precision=prec_arg))
 
     # 1. Determine configuration source
     resume_path: Optional[Path] = None
@@ -527,15 +575,25 @@ def main():
     if args.set:
         config = apply_dot_overrides(config, args.set)
 
-    # 3. Model Architecture & Learning Rate Rules
+    # 3. Model Architecture & Hardware / Training Rules
     model_cfg = config.get("model", {})
     architecture = str(model_cfg.get("architecture", "resnet50")).lower().strip()
     training_cfg = config.get("training", {})
 
+    # Detect device early for precision resolution
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    use_cuda = device.type == "cuda"
+
     raw_channels_last = training_cfg.get("channels_last", "auto")
     use_channels_last = resolve_channels_last(raw_channels_last, architecture)
+
+    raw_precision = training_cfg.get("precision", "auto")
+    precision = resolve_precision(raw_precision, use_cuda)
+    training_cfg["precision"] = precision
+
     logger.info("Resolved channels_last: %s (config: %s, architecture: %s)",
                 use_channels_last, raw_channels_last, architecture)
+    logger.info("Resolved precision: %s (config: %s)", precision, raw_precision)
 
     # Detect whether learning_rate is explicit: only if in child config or in --set
     has_explicit_lr_in_child = (
@@ -559,7 +617,6 @@ def main():
     training_cfg.pop("_is_base_learning_rate", None)
 
     base_lr = float(training_cfg.get("learning_rate", 1e-4))
-    print(f"Resolved Learning Rate: {base_lr}")
     logger.info("Resolved Learning Rate: %s", base_lr)
 
     # 4. Global Seed
@@ -567,16 +624,13 @@ def main():
     set_seed(seed)
 
     # 5. Device Setup & Precision flags
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    use_cuda = device.type == "cuda"
-
     if use_cuda:
         # TF32 enabled for performance on Ampere+ architectures
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
-        logger.info("CUDA detected: TF32 enabled, bf16 autocast ready.")
+        logger.info("CUDA detected: TF32 enabled, precision: %s", precision)
     else:
-        logger.info("Running on CPU.")
+        logger.info("Running on CPU, precision: %s", precision)
 
     # 6. Unified Classes & Datasets
     unified_classes_path = config.get("unified_classes", "ml/configs/labels/unified_classes.yaml")
@@ -720,6 +774,7 @@ def main():
         base_lr=base_lr,
         min_lr=min_lr
     )
+    scaler = torch.amp.GradScaler("cuda") if (precision == "fp16" and use_cuda) else None
 
     # 9. Output Directory Setup
     if resume_path:
@@ -768,6 +823,13 @@ def main():
         model.load_state_dict(ckpt_full["model_state_dict"])
         optimizer.load_state_dict(ckpt_full["optimizer_state_dict"])
         scheduler.load_state_dict(ckpt_full["scheduler_state_dict"])
+        if scaler is not None:
+            scaler_sd = ckpt_full.get("scaler_state_dict") or ckpt_full.get("scaler")
+            if scaler_sd is not None:
+                try:
+                    scaler.load_state_dict(scaler_sd)
+                except Exception as e:
+                    logger.warning("Failed to restore GradScaler state: %s", e)
         resumed_from_epoch = int(ckpt_full.get("epoch", 0))
         start_epoch = resumed_from_epoch + 1
         best_metric = ckpt_full.get("best_metric", -float("inf"))
@@ -824,6 +886,7 @@ def main():
 
     run_start_time = time.time()
     last_trained_epoch = start_epoch
+    total_train_batches = min(20, len(train_loader)) if args.smoke else len(train_loader)
 
     # 12. Main Training Loop
     for epoch in range(start_epoch, total_epochs):
@@ -835,6 +898,10 @@ def main():
         train_samples = 0
         train_correct = 0
         distinct_field_indices: Set[int] = set()
+
+        last_log_time = epoch_t0
+        last_log_samples = 0
+        last_log_batch = 0
 
         current_lr = scheduler.get_last_lr()[0]
 
@@ -855,27 +922,64 @@ def main():
 
             optimizer.zero_grad(set_to_none=True)
 
-            # bf16 autocast on CUDA with no GradScaler
-            with torch.autocast(
-                device_type="cuda" if use_cuda else "cpu",
-                dtype=torch.bfloat16,
-                enabled=use_cuda
-            ):
+            if precision == "fp16":
+                with torch.autocast(device_type="cuda" if use_cuda else "cpu", dtype=torch.float16, enabled=True):
+                    outputs = model(images)
+                    loss = criterion(outputs, targets)
+            elif precision == "bf16":
+                with torch.autocast(device_type="cuda" if use_cuda else "cpu", dtype=torch.bfloat16, enabled=use_cuda):
+                    outputs = model(images)
+                    loss = criterion(outputs, targets)
+            else:  # fp32
                 outputs = model(images)
                 loss = criterion(outputs, targets)
 
-            loss.backward()
-
-            # Gradient clipping 1.0
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip)
-
-            optimizer.step()
+            if scaler is not None:
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip)
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip)
+                optimizer.step()
 
             batch_sz = targets.size(0)
             train_loss_sum += loss.item() * batch_sz
             train_samples += batch_sz
             preds = outputs.argmax(dim=-1)
             train_correct += (preds == targets).sum().item()
+
+            # Progress logging every 100 training batches
+            if (batch_idx + 1) % 100 == 0:
+                now = time.time()
+                elapsed_since_last = now - last_log_time
+                samples_since_last = train_samples - last_log_samples
+                batches_since_last = (batch_idx + 1) - last_log_batch
+                images_per_sec = samples_since_last / elapsed_since_last if elapsed_since_last > 0 else 0.0
+
+                running_train_loss = train_loss_sum / train_samples if train_samples > 0 else 0.0
+
+                batches_done = batch_idx + 1
+                remaining_batches = max(0, total_train_batches - batches_done)
+                sec_per_batch = elapsed_since_last / batches_since_last if batches_since_last > 0 else 0.0
+                eta_sec = remaining_batches * sec_per_batch
+
+                logger.info(
+                    "Epoch [%d/%d] Batch [%d/%d] | %.1f images/s | Running Loss: %.4f | ETA: %.1fs",
+                    epoch + 1,
+                    total_epochs,
+                    batches_done,
+                    total_train_batches,
+                    images_per_sec,
+                    running_train_loss,
+                    eta_sec,
+                )
+
+                last_log_time = now
+                last_log_samples = train_samples
+                last_log_batch = batches_done
 
         scheduler.step()
 
@@ -896,7 +1000,8 @@ def main():
                 device=device,
                 use_cuda=use_cuda,
                 channels_last=use_channels_last,
-                smoke=args.smoke
+                smoke=args.smoke,
+                precision=precision,
             )
             epoch_metrics[f"{v_split}_loss"] = v_loss
             epoch_metrics[f"{v_split}_acc"] = v_acc
@@ -951,6 +1056,7 @@ def main():
             "state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict": scheduler.state_dict(),
+            "scaler_state_dict": scaler.state_dict() if scaler is not None else None,
             "epoch": epoch,
             "best_metric": best_metric,
             "best_epoch": best_epoch,
@@ -998,7 +1104,19 @@ def main():
             patience_counter += 1
             if early_stop_enabled and patience_counter >= patience:
                 logger.info("Early stopping triggered after %d epochs without improvement.", patience)
+                sys.stdout.flush()
+                for handler in logger.handlers:
+                    handler.flush()
+                for handler in logging.root.handlers:
+                    handler.flush()
                 break
+
+        # Flush stdout and logger after each epoch
+        sys.stdout.flush()
+        for handler in logger.handlers:
+            handler.flush()
+        for handler in logging.root.handlers:
+            handler.flush()
 
     total_training_time = round(time.time() - run_start_time, 2)
 
@@ -1006,6 +1124,7 @@ def main():
     final_metrics = {
         "experiment_name": exp_name,
         "architecture": architecture,
+        "precision": precision,
         "selection_metric": selection_metric,
         "best_epoch": best_epoch,
         "best_metric_value": best_metric,

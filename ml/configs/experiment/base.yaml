@@ -47,6 +47,7 @@ training:
   min_lr: 0.000001
   gradient_clip: 1.0
   channels_last: "auto" # true | false | auto (auto: false for efficientnet, true otherwise)
+  precision: "auto" # auto | fp16 | bf16 | fp32 (auto: fp16 on CUDA, fp32 on CPU)
 
 # Sampling Strategy
 sampling:
