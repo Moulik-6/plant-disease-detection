@@ -27,7 +27,7 @@ Features:
   - Evaluation & Checkpointing:
       * Every epoch logs train loss and (accuracy, macro-F1) for all configured validation splits
       * Selects best epoch by config selection.metric (default: field_val_macro_f1) with early stopping
-      * Output artifacts in runs/<exp_name>/<timestamp>/:
+      * Output artifacts in runs/<exp_name>_<architecture>/<timestamp>/:
           - config.yaml (resolved)
           - git_commit.txt (try/except)
           - log.csv
@@ -512,7 +512,8 @@ def main():
     )
     parser.add_argument(
         "--set",
-        nargs="*",
+        action="append",
+        nargs="+",
         default=[],
         help="Config overrides using dot notation (e.g. --set model.architecture=vit_b_16 training.learning_rate=3e-5)"
     )
@@ -534,6 +535,17 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # Flatten --set overrides into one list
+    flattened_set: List[str] = []
+    if args.set:
+        for item in args.set:
+            if isinstance(item, list):
+                for sub in item:
+                    flattened_set.append(str(sub).strip())
+            else:
+                flattened_set.append(str(item).strip())
+    args.set = [s for s in flattened_set if s]
 
     if args.self_check:
         prec_arg = "auto"
@@ -784,7 +796,7 @@ def main():
     else:
         exp_name = config.get("exp_name") or Path(args.exp or "resumed_exp").stem
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        run_dir = Path("runs") / exp_name / timestamp
+        run_dir = Path("runs") / f"{exp_name}_{architecture}" / timestamp
         run_dir.mkdir(parents=True, exist_ok=True)
         logger.info("Run directory initialized: %s", run_dir.resolve())
 
