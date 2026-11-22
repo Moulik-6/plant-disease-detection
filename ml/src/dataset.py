@@ -1,3 +1,11 @@
+"""
+Legacy dataset utilities for Stage-I PlantVillage experiments.
+
+This module is retained because it holds the legacy stratified split function
+(`stratified_split_indices`) which `ml/data/build_manifest.py` imports to reproduce
+and audit the original Stage-I dataset partitions.
+"""
+
 import os
 import random
 from typing import Dict, Tuple, List, Optional

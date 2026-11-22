@@ -5,11 +5,13 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
-# Ensure ml is in sys.path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Ensure repository root is in sys.path
+_repo_root = str(Path(__file__).resolve().parents[2])
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 import torch
-from gradcam import (
+from ml.analysis.gradcam import (
     load_model_and_classes,
     get_target_layers_and_transform,
     preprocess_image,
@@ -24,21 +26,21 @@ MODELS = [
     {
         "id": "resnet50",
         "name": "ResNet50",
-        "config": "ml/configs/config.yaml",
+        "config": "ml/legacy/config.yaml",
         "checkpoint": "ml/checkpoints/resnet50/best_model.pth",
         "out_dir": "ml/visualizations/resnet50",
     },
     {
         "id": "efficientnet_v2",
         "name": "EfficientNetV2-S",
-        "config": "ml/configs/efficientnet_v2.yaml",
+        "config": "ml/legacy/efficientnet_v2.yaml",
         "checkpoint": "ml/checkpoints/efficientnet_v2/best_model.pth",
         "out_dir": "ml/visualizations/efficientnet_v2",
     },
     {
         "id": "vit_b_16",
         "name": "ViT-B/16",
-        "config": "ml/configs/vit.yaml",
+        "config": "ml/legacy/vit.yaml",
         "checkpoint": "ml/checkpoints/vit/best_model.pth",
         "out_dir": "ml/visualizations/vit_b_16",
     },

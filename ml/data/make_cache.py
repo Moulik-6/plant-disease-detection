@@ -29,6 +29,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from PIL import Image
 
+# Ensure repository root is on sys.path
+_repo_root = str(Path(__file__).resolve().parents[2])
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("make_cache")
 

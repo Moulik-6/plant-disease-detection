@@ -43,17 +43,13 @@ def safe_torch_load(*args, **kwargs):
 
 torch.load = safe_torch_load
 
-# Setup sys.path
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(CURRENT_DIR) if os.path.basename(CURRENT_DIR) == "ml" else CURRENT_DIR
+# Ensure repository root is on sys.path
+_repo_root = str(Path(__file__).resolve().parents[2])
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
-if CURRENT_DIR not in sys.path:
-    sys.path.append(CURRENT_DIR)
-if PROJECT_ROOT not in sys.path:
-    sys.path.append(PROJECT_ROOT)
-
-from gradcam import load_model_and_classes
-from src.utils import load_config
+from ml.analysis.gradcam import load_model_and_classes
+from ml.src.utils import load_config
 
 
 def resolve_path(rel_or_abs_path: str) -> str:
@@ -211,9 +207,9 @@ def main():
     # 3. Model configs and checkpoint loading
     model_names = ["resnet50", "efficientnet_v2", "vit"]
     config_paths = {
-        "resnet50": resolve_path("ml/configs/config.yaml"),
-        "efficientnet_v2": resolve_path("ml/configs/efficientnet_v2.yaml"),
-        "vit": resolve_path("ml/configs/vit.yaml")
+        "resnet50": resolve_path("ml/legacy/config.yaml"),
+        "efficientnet_v2": resolve_path("ml/legacy/efficientnet_v2.yaml"),
+        "vit": resolve_path("ml/legacy/vit.yaml")
     }
     ckpt_paths = {
         name: resolve_path(os.path.join(args.checkpoints_dir, name, "best_model.pth"))

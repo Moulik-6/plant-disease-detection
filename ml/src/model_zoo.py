@@ -6,12 +6,8 @@ from typing import Any, Dict, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 
-try:
-    from ml.src.models import build_model
-    from ml.src.fusion import FusionModel
-except ImportError:
-    from src.models import build_model
-    from src.fusion import FusionModel
+from ml.src.models import build_model
+from ml.src.fusion import FusionModel
 
 logger = logging.getLogger("model_zoo")
 
@@ -82,10 +78,7 @@ def load_checkpoint_model(
     # 2. Resolve class_to_idx & idx_to_class
     class_to_idx = ckpt.get("class_to_idx")
     if class_to_idx is None:
-        try:
-            from ml.src.datasets import load_unified_class_to_idx
-        except ImportError:
-            from src.datasets import load_unified_class_to_idx
+        from ml.src.datasets import load_unified_class_to_idx
         class_to_idx = load_unified_class_to_idx()
     idx_to_class = {v: k for k, v in class_to_idx.items()}
 

@@ -27,6 +27,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import torch
 
+# Ensure repository root is on sys.path
+_repo_root = str(Path(__file__).resolve().parents[2])
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+
 
 def load_inputs(results_dir: str, checkpoint_path: str):
     """Loads files.csv, checkpoint class_to_idx, and model probabilities."""

@@ -12,7 +12,7 @@ Parses PlantWild v1 dataset structure:
             ├── train.txt / val.txt / test.txt (official split lists)
             └── ...
 
-Aligns PlantWild categories with the 38 PlantVillage classes using `ml/configs/plantwild_map.yaml`.
+Aligns PlantWild categories with the 38 PlantVillage classes using `ml/configs/mappings/plantwild_map.yaml`.
 Folders not present in the mapping configuration receive `unified_label = "other"` and are
 preserved in the manifest for background/out-of-distribution evaluation ('other_pool').
 
@@ -25,10 +25,16 @@ import json
 import logging
 import os
 from pathlib import Path
+import sys
 from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import yaml
+
+# Ensure repository root is on sys.path
+_repo_root = str(Path(__file__).resolve().parents[3])
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +144,7 @@ class PlantWildAdapter:
     def __init__(
         self,
         data_dir: str = "data/plantwild/plantwild",
-        mapping_file: str = "ml/configs/plantwild_map.yaml",
+        mapping_file: str = "ml/configs/mappings/plantwild_map.yaml",
         url_record_file: Optional[str] = None
     ):
         """

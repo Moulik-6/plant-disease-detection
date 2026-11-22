@@ -1,5 +1,11 @@
+import sys
 from pathlib import Path
 from PIL import Image, ImageOps, ImageDraw, ImageFont
+
+# Ensure repository root is in sys.path
+_repo_root = str(Path(__file__).resolve().parents[2])
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 BASE = Path("ml/visualizations")
 

@@ -7,7 +7,7 @@ on the realistic, in-the-wild PlantDoc dataset across mapped crop-disease catego
 
 Features:
   - Robust directory walking using os.scandir preserving raw file paths (supports odd characters).
-  - Configurable class mapping with confidence ratings (ml/configs/plantdoc_map.yaml).
+  - Configurable class mapping with confidence ratings (ml/configs/mappings/plantdoc_map.yaml).
   - Strict assertions ensuring mapped targets match PlantVillage class_to_idx.
   - Identical image preprocessing (Resize to 224x224 and ImageNet normalization).
   - Full statistical breakdown:
@@ -63,17 +63,14 @@ torch.load = safe_torch_load
 # ---------------------------------------------------------------------------
 # Path resolution and module imports
 # ---------------------------------------------------------------------------
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(CURRENT_DIR) if os.path.basename(CURRENT_DIR) == "ml" else CURRENT_DIR
+# Ensure repository root is on sys.path
+_repo_root = str(Path(__file__).resolve().parents[2])
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
-if CURRENT_DIR not in sys.path:
-    sys.path.append(CURRENT_DIR)
-if PROJECT_ROOT not in sys.path:
-    sys.path.append(PROJECT_ROOT)
-
-from gradcam import load_model_and_classes
-from src.dataset import get_transforms
-from src.utils import load_config
+from ml.analysis.gradcam import load_model_and_classes
+from ml.src.dataset import get_transforms
+from ml.src.utils import load_config
 
 
 def resolve_path(rel_or_abs_path: str) -> str:
@@ -140,8 +137,8 @@ def parse_args():
         help="Comma-separated splits to evaluate (default: 'train,test')"
     )
     parser.add_argument(
-        "--map", type=str, default="ml/configs/plantdoc_map.yaml",
-        help="Path to PlantDoc to PlantVillage class mapping YAML (default: ml/configs/plantdoc_map.yaml)"
+        "--map", type=str, default="ml/configs/mappings/plantdoc_map.yaml",
+        help="Path to PlantDoc to PlantVillage class mapping YAML (default: ml/configs/mappings/plantdoc_map.yaml)"
     )
     parser.add_argument(
         "--results-dir", type=str, default="ml/results/plantdoc",
@@ -241,9 +238,9 @@ def main():
     # 2. Load model checkpoints and verify class_to_idx
     model_names = ["resnet50", "efficientnet_v2", "vit"]
     config_paths = {
-        "resnet50": resolve_path("ml/configs/config.yaml"),
-        "efficientnet_v2": resolve_path("ml/configs/efficientnet_v2.yaml"),
-        "vit": resolve_path("ml/configs/vit.yaml")
+        "resnet50": resolve_path("ml/legacy/config.yaml"),
+        "efficientnet_v2": resolve_path("ml/legacy/efficientnet_v2.yaml"),
+        "vit": resolve_path("ml/legacy/vit.yaml")
     }
     ckpt_paths = {
         name: resolve_path(f"ml/checkpoints/{name}/best_model.pth")

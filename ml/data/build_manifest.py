@@ -4,8 +4,8 @@ Unified Manifest Builder & Cross-Dataset Near-Duplicate Group Splitter.
 
 Scans:
   1. PlantVillage (data/plantvillage_dataset/color)
-  2. PlantDoc (data/plantdoc/PlantDoc-Dataset/train and test, mapped via ml/configs/plantdoc_map.yaml)
-  3. PlantWild v1 (data/plantwild/plantwild/images, mapped via ml/configs/plantwild_map.yaml)
+  2. PlantDoc (data/plantdoc/PlantDoc-Dataset/train and test, mapped via ml/configs/mappings/plantdoc_map.yaml)
+  3. PlantWild v1 (data/plantwild/plantwild/images, mapped via ml/configs/mappings/plantwild_map.yaml)
 
 Produces:
   - data/manifest.csv:
@@ -16,7 +16,7 @@ Produces:
       split integrity verification; and SHA-256 checksum of manifest.csv.
 
 Key Design & Soundness Highlights:
-  - PlantWild Ingestion: Real adapter for PlantWild v1 using `ml/sources/plantwild.py`. Unmapped folders
+  - PlantWild Ingestion: Real adapter for PlantWild v1 using `ml/data/sources/plantwild.py`. Unmapped folders
     receive unified_label="other" and are placed in the "other_pool" split.
   - URL Record Deduplication: Uses `data/plantwild/plantwild/url_record.json`. URL-based union only between
     images sharing the same orig_label (never cross-label).
@@ -51,28 +51,13 @@ from PIL import Image
 import torch
 import yaml
 
-# ---------------------------------------------------------------------------
-# Setup sys.path to import directly from ml/ modules without copying
-# ---------------------------------------------------------------------------
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))      # ml/data
-ML_DIR = os.path.dirname(CURRENT_DIR)                         # ml
-PROJECT_ROOT = os.path.dirname(ML_DIR)                        # project root
+# Ensure repository root is on sys.path
+_repo_root = str(Path(__file__).resolve().parents[2])
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
-for path_entry in [PROJECT_ROOT, ML_DIR]:
-    if path_entry not in sys.path:
-        sys.path.insert(0, path_entry)
-
-# Import stratified_split_indices directly from ml/src/dataset.py
-try:
-    from src.dataset import stratified_split_indices
-except ImportError:
-    from ml.src.dataset import stratified_split_indices
-
-# Import PlantWildAdapter from ml/sources/plantwild.py
-try:
-    from sources.plantwild import PlantWildAdapter
-except ImportError:
-    from ml.sources.plantwild import PlantWildAdapter
+from ml.src.dataset import stratified_split_indices
+from ml.data.sources.plantwild import PlantWildAdapter
 
 from torchvision.datasets import ImageFolder
 
@@ -345,7 +330,7 @@ def scan_plantdoc(
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """
     Scans PlantDoc dataset (data/plantdoc/PlantDoc-Dataset/train and test),
-    mapping original class directory names to unified PlantVillage labels via ml/configs/plantdoc_map.yaml.
+    mapping original class directory names to unified PlantVillage labels via ml/configs/mappings/plantdoc_map.yaml.
     """
     doc_path = Path(plantdoc_root).resolve()
     map_path = Path(map_yaml_path).resolve()
@@ -417,7 +402,7 @@ def scan_plantwild(
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """
     Scans PlantWild v1 dataset using PlantWildAdapter.
-    Class folders are mapped via ml/configs/plantwild_map.yaml. Folders not in the mapping
+    Class folders are mapped via ml/configs/mappings/plantwild_map.yaml. Folders not in the mapping
     receive unified_label='other' and are preserved in the manifest. Official split lists
     are discovered and recorded. Associated source URLs are extracted from url_record.json.
     """
@@ -1152,14 +1137,14 @@ def main():
     parser.add_argument(
         "--pdoc-map",
         type=str,
-        default="ml/configs/plantdoc_map.yaml",
-        help="Path to PlantDoc class mapping YAML (default: ml/configs/plantdoc_map.yaml)"
+        default="ml/configs/mappings/plantdoc_map.yaml",
+        help="Path to PlantDoc class mapping YAML (default: ml/configs/mappings/plantdoc_map.yaml)"
     )
     parser.add_argument(
         "--pwild-map",
         type=str,
-        default="ml/configs/plantwild_map.yaml",
-        help="Path to PlantWild class mapping YAML (default: ml/configs/plantwild_map.yaml)"
+        default="ml/configs/mappings/plantwild_map.yaml",
+        help="Path to PlantWild class mapping YAML (default: ml/configs/mappings/plantwild_map.yaml)"
     )
     parser.add_argument(
         "--url-record",

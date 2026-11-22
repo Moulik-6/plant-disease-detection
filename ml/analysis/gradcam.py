@@ -11,21 +11,23 @@ import cv2
 import torch
 import torch.nn.functional as F
 
-# Add ml/ to sys.path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Ensure repository root is on sys.path
+_repo_root = str(Path(__file__).resolve().parents[2])
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
-from src.dataset import get_dataloaders, get_transforms
-from src.models import build_model
-from src.utils import load_config
+from ml.src.dataset import get_dataloaders, get_transforms
+from ml.src.models import build_model
+from ml.src.utils import load_config
 
 
 def build_parser():
     parser = argparse.ArgumentParser(description="Grad-CAM visualization for Plant Disease Detection")
-    parser.add_argument("--config", type=str, default="ml/configs/config.yaml", help="Path to config file")
+    parser.add_argument("--config", type=str, default="ml/legacy/config.yaml", help="Path to config file")
     parser.add_argument("--checkpoint", type=str, default="ml/checkpoints/resnet50/best_model.pth", help="Checkpoint file path")
     parser.add_argument("--image", type=str, default=None, help="Path to single input image")
     parser.add_argument("--output", type=str, default=None, help="Output path for single image overlay or output directory for batch")

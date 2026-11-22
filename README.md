@@ -1,6 +1,6 @@
 # Plant Disease Detection & Classification
 
-Deep learning pipeline for automated crop leaf disease detection and classification across 38 crop-disease pairs. The repository benchmarks convolutional and transformer architectures (ResNet-50, EfficientNetV2-S, Vision Transformer ViT-B/16) and a probability-averaging ensemble, paired with explainability (Grad-CAM), perceptual hash data leakage audits, and CPU inference latency profiling.
+Deep learning pipeline for automated crop leaf disease detection and classification across 38 crop-disease pairs. The repository benchmarks convolutional and transformer architectures (ResNet-50, EfficientNetV2-S, Vision Transformer ViT-B/16, and multi-backbone fusion models) and ensembles, paired with explainability (Grad-CAM), perceptual hash data leakage audits, multi-dataset generalization manifests (PlantVillage, PlantDoc, PlantWild), and CPU inference latency profiling.
 
 ---
 
@@ -9,7 +9,7 @@ Deep learning pipeline for automated crop leaf disease detection and classificat
 - **Source**: [Kaggle abdallahalidev/plantvillage-dataset](https://www.kaggle.com/datasets/abdallahalidev/plantvillage-dataset)
 - **Local Location**: `data/plantvillage_dataset/color`
 - **Volume & Classes**: 54,305 color leaf images across 38 distinct crop-disease categories (apple, blueberry, cherry, corn, grape, orange, peach, bell pepper, potato, raspberry, soybean, squash, strawberry, tomato).
-- **Split Configuration**: Stratified 70% train / 15% validation / 15% test split with fixed seed `42`, implemented in `ml/src/dataset.py`:
+- **Split Configuration**: Stratified 70% train / 15% validation / 15% test split with fixed seed `42`, implemented in `ml/src/dataset.py` (and integrated into multi-source manifests via `ml/data/build_manifest.py`):
   - **Train**: 37,997 images
   - **Validation**: 8,129 images
   - **Test**: 8,179 images
@@ -34,30 +34,51 @@ ml/checkpoints/
 
 ```
 plant-disease-detection/
-├── data/
-│   └── plantvillage_dataset/
-│       └── color/                     # 38 class subdirectories (54,305 images)
+├── data/                              # Raw datasets (PlantVillage, PlantDoc, PlantWild)
 ├── ml/
-│   ├── configs/
-│   │   ├── config.yaml                # ResNet-50 default configuration
-│   │   ├── efficientnet_v2.yaml       # EfficientNetV2-S preset
-│   │   └── vit.yaml                   # Vision Transformer (ViT-B/16) preset
-│   ├── src/
-│   │   ├── dataset.py                 # Stratified 70/15/15 dataset loader & augmentations
-│   │   ├── models.py                  # Architecture factory (ResNet50, EfficientNetV2, ViT)
-│   │   └── utils.py                   # YAML config loader, metric tracking, checkpoint IO
+│   ├── configs/                       # Configurations
+│   │   ├── experiment/                # Stage-II experiment configs (base, a_pv_only, b_mixed, c_finetune)
+│   │   ├── labels/                    # Label maps (pv_38.yaml)
+│   │   └── mappings/                  # Dataset cross-alignment (plantdoc_map, plantwild_map)
+│   ├── src/                           # Core library modules
+│   │   ├── datasets.py                # Manifest-based dataset loader & transforms
+│   │   ├── models.py                  # Standard backbones (ResNet, EfficientNetV2, ViT)
+│   │   ├── fusion.py                  # Multi-backbone fusion models (concat, gated)
+│   │   ├── model_zoo.py               # Unified model factory and checkpoint loader
+│   │   ├── sampling.py                # Source-balanced batch sampling
+│   │   ├── utils.py                   # YAML configs, metric tracking, checkpoint IO
+│   │   └── dataset.py                 # Legacy stratified split (imported by build_manifest.py)
+│   ├── data/                          # Dataset preprocessing & manifest tooling
+│   │   ├── build_manifest.py          # Unified multi-source manifest builder
+│   │   ├── make_cache.py              # Pre-resized image caching tool
+│   │   └── sources/                   # Dataset ingestion adapters (plantwild.py)
+│   ├── analysis/                      # Diagnostic and explainability tools
+│   │   ├── gradcam.py                 # Grad-CAM attention visualizer
+│   │   ├── leakage_check.py           # Perceptual hash leakage audit
+│   │   ├── analyze_plantdoc.py        # PlantDoc split & label diagnostics
+│   │   ├── eval_plantdoc.py           # PlantDoc standalone evaluation
+│   │   └── benchmark_latency.py       # Single-image CPU inference latency profiling
+│   ├── legacy/                        # Stage-I scripts and configurations
+│   │   ├── train.py                   # Stage-I training script
+│   │   ├── evaluate.py                # Stage-I evaluation script
+│   │   ├── full_eval.py               # Stage-I multi-model evaluation & ensemble
+│   │   ├── run_experiment.py          # Stage-I 4-panel Grad-CAM comparison runner
+│   │   ├── create_gradcam_comparisons.py # Grad-CAM panel stitcher
+│   │   ├── config.yaml                # Stage-I ResNet-50 config
+│   │   ├── efficientnet_v2.yaml       # Stage-I EfficientNetV2 config
+│   │   ├── vit.yaml                   # Stage-I ViT config
+│   │   └── README.md                  # Stage-I documentation
 │   ├── checkpoints/                   # Checkpoints per architecture (stored in S3)
 │   ├── results/                       # Evaluation reports, probs, metrics JSON, leakage
-│   │   └── leakage/                   # Visualizations of near-duplicate test/train pairs
-│   ├── visualizations/                # Grad-CAM overlays and comparative panels
-│   ├── train.py                       # Supervised training loop
-│   ├── evaluate.py                    # Standalone checkpoint evaluation
-│   ├── full_eval.py                   # Multi-model benchmarking & ensemble pipeline
-│   ├── leakage_check.py               # 64-bit pHash train/test duplicate detection
-│   ├── benchmark_latency.py           # Single-image latency profiling across CPU threads
-│   ├── gradcam.py                     # Grad-CAM explainability generator
-│   ├── run_experiment.py              # Multi-model 4-panel Grad-CAM comparison runner
+│   ├── train.py                       # Stage-II unified training pipeline
+│   ├── evaluate.py                    # Stage-II multi-run evaluation & benchmarking suite
 │   └── requirements.txt               # Dependencies & platform instructions
+├── scripts/                           # Queue runner & automation
+│   ├── run_queue.sh                   # Sequential 9-experiment queue runner with S3 sync
+│   └── aws_setup.md                   # AWS GPU training instance setup guide
+├── docs/                              # Project documentation & reorganization records
+│   └── REORG_PLAN.md
+├── tests/                             # Unit & integration tests
 ├── .gitignore
 └── README.md
 ```
@@ -66,103 +87,70 @@ plant-disease-detection/
 
 ## Script Guide
 
-### 1. Training (`train.py`)
-Trains an individual backbone architecture on the stratified training set with cross-entropy loss, learning rate scheduling, and early stopping.
+### 1. Unified Training (`ml/train.py`)
+Trains models using configuration presets with support for mixed precision (`auto`, `fp16`, `bf16`, `fp32`), multi-stage training (e.g. fusion backbones), GradScaler, source-balanced sampling, and progress tracking.
 
 ```bash
-# Train default ResNet-50:
-python ml/train.py --config ml/configs/config.yaml
+# Run experiment with overrides:
+python ml/train.py --exp ml/configs/experiment/a_pv_only.yaml --set model.architecture=resnet50
 
-# Train EfficientNetV2-S:
-python ml/train.py --config ml/configs/efficientnet_v2.yaml
-
-# Train ViT-B/16:
-python ml/train.py --config ml/configs/vit.yaml
+# Self-check sanity test:
+python ml/train.py --self-check
 ```
-- **Outputs**: Best checkpoint (`best_model.pth`), class index mapping (`classes.json`), and validation metrics logs saved in `ml/checkpoints/<architecture>/`.
 
 ---
 
-### 2. Standalone Evaluation (`evaluate.py`)
-Evaluates a single model checkpoint against the 8,179-image test partition.
+### 2. Multi-Run & Checkpoint Evaluation (`ml/evaluate.py`)
+Evaluates completed runs and baseline checkpoints across manifest splits (`pv_clean_test`, `field_test`, etc.) with leakage guards and probability-averaging ensembling.
 
 ```bash
-python ml/evaluate.py --checkpoint ml/checkpoints/resnet50/best_model.pth
+# Evaluate baseline checkpoint:
+python ml/evaluate.py --checkpoint ml/checkpoints/resnet50/best_model.pth --name resnet50_baseline
+
+# Evaluate specific runs:
+python ml/evaluate.py --runs runs/a_pv_only_resnet50/* runs/b_mixed_resnet50/*
 ```
-- **Outputs**: Test classification report (precision, recall, F1, support per class) and accuracy printed to console; summary JSON saved to `<checkpoint_dir>/test_evaluation_report.json`.
 
 ---
 
-### 3. Full Multi-Model Evaluation & Ensembling (`full_eval.py`)
-Loads all three checkpoints (`resnet50`, `efficientnet_v2`, `vit`), verifies identical `class_to_idx` mappings with the data loader, exports raw softmax probabilities, builds a probability-averaging ensemble, calculates accuracy and macro F1 metrics, records model weight footprint (MB), measures median single-image latency, and prints a comparative summary table.
+### 3. Dataset Manifest Generation (`ml/data/build_manifest.py`)
+Builds unified dataset manifests linking PlantVillage, PlantDoc, and PlantWild with category harmonization.
 
 ```bash
-# Full evaluation:
-python ml/full_eval.py
-
-# Fast smoke-test (limits test loader to N samples):
-python ml/full_eval.py --limit 5
-
-# Skip single-image latency benchmarking:
-python ml/full_eval.py --skip-latency
+python ml/data/build_manifest.py
 ```
-- **Outputs**:
-  - `ml/results/test_files.csv`: List of test image paths and ground-truth labels.
-  - `ml/results/probs_<model>.npy`: Softmax probability distributions for each model and ensemble.
-  - `ml/results/per_class_<model>.csv` & `ml/results/per_class_metrics.csv`: Per-class precision, recall, and F1.
-  - `ml/results/confusion_matrix_<model>.png` & `ml/results/confusion_matrix.png`: Normalized confusion matrix heatmaps.
-  - `ml/results/metrics.json`: Full evaluation results, metadata, and hardware environment specs.
 
 ---
 
-### 4. Data Leakage & Near-Duplicate Audit (`leakage_check.py`)
-Rebuilds the dataset split via `get_dataloaders(num_workers=0)` and computes 64-bit perceptual hashes (`imagehash.phash`) for all 37,997 train and 8,179 test images. Evaluates minimum Hamming distances from every test image to any train image using vectorized matrix operations.
+### 4. Data Leakage & Near-Duplicate Audit (`ml/analysis/leakage_check.py`)
+Computes 64-bit perceptual hashes (`imagehash.phash`) across train and test partitions to identify and visualize data leakage and near-duplicate pairs.
 
 ```bash
-python ml/leakage_check.py
+python ml/analysis/leakage_check.py
 ```
-- **Outputs**:
-  - `ml/results/hashes.npy`: Cached train and test perceptual hashes for near-instant reruns.
-  - `ml/results/leakage/`: High-resolution side-by-side PNGs (`pair_01_dist_0.png` through `pair_30_dist_4.png`) illustrating the 30 closest train/test pairs.
-  - `ml/results/leakage_metrics.json`: Leakage counts, worst classes, and model accuracy on near-duplicates ($d_H \le 4$) versus clean samples ($d_H > 4$).
 
 ---
 
-### 5. Single-Image Latency Benchmarking (`benchmark_latency.py`)
-Measures single-image forward-pass execution latency (batch size 1) across individual models and the sequential ensemble inside `torch.inference_mode()`. Employs 20 warm-up runs and 10 interleaved rounds (20 runs/round = 200 timed runs per model) to eliminate thermal drift and scheduling bias.
+### 5. Latency Benchmarking (`ml/analysis/benchmark_latency.py`)
+Profiles single-image CPU inference latency across models with warm-up cycles and interleaved timing rounds.
 
 ```bash
-# Benchmark with default 4 PyTorch CPU threads:
-python ml/benchmark_latency.py --threads 4
+python ml/analysis/benchmark_latency.py --threads 4
 ```
-- **Outputs**:
-  - Console report displaying hardware environment (PyTorch version, thread count, CPU model, Windows active power plan from `powercfg /getactivescheme`).
-  - Latency statistics (median, p10, p90, and $p_{90}/p_{10}$ stability ratio) with noise alerts if $p_{90}/p_{10} > 1.5$.
-  - `ml/results/latency.json`: Structured benchmark metrics.
 
 ---
 
-### 6. Grad-CAM Explainability (`gradcam.py`)
-Generates Gradient-weighted Class Activation Mapping (Grad-CAM) overlays showing spatial attention regions supporting model predictions. Adapts automatically to CNN final conv layers (`layer4[-1]`, `features[-1]`) and Vision Transformers (using token reshaping to reproject 1D patch embeddings into a 2D spatial grid).
+### 6. Grad-CAM Explainability (`ml/analysis/gradcam.py`)
+Generates Gradient-weighted Class Activation Mapping (Grad-CAM) heatmaps across CNN and Vision Transformer architectures.
 
 ```bash
-# Single image visualization:
-python ml/gradcam.py --image path/to/leaf.jpg --checkpoint ml/checkpoints/resnet50/best_model.pth
-
-# Batch generation across test split:
-python ml/gradcam.py --batch 10 --checkpoint ml/checkpoints/efficientnet_v2/best_model.pth
+python ml/analysis/gradcam.py --image path/to/leaf.jpg --checkpoint ml/checkpoints/resnet50/best_model.pth
 ```
-- **Outputs**: Visualizations saved to `ml/visualizations/`.
 
 ---
 
-### 7. Multi-Model Grad-CAM Experiment Comparison (`run_experiment.py`)
-Runs comparative Grad-CAM across ResNet-50, EfficientNetV2-S, and ViT-B/16 on representative disease samples (e.g., Orange Huanglongbing, Strawberry Leaf Scorch, Corn Common Rust).
-
-```bash
-python ml/run_experiment.py
-```
-- **Outputs**: 4-panel comparison images (`Original | ResNet50 | EfficientNetV2-S | ViT-B/16`) saved in `ml/visualizations/comparison/` and summary CSV records.
+### 7. Legacy Pipeline (`ml/legacy/`)
+Stage-I training, evaluation, and comparative experiment scripts are preserved under `ml/legacy/`. See [ml/legacy/README.md](file:///c:/Major%20Project/plant-disease-detection/ml/legacy/README.md) for details.
 
 ---
 
@@ -178,4 +166,4 @@ Evaluation on the 8,179-image PlantVillage stratified test split:
 | **Probability-Averaging Ensemble** | **99.93%** | **0.9988** | 8,179-image PlantVillage test split |
 
 > [!WARNING]
-> These are in-domain results and field-image generalisation is still to be evaluated.
+> These are in-domain results and field-image generalisation is evaluated via the Stage-II evaluation suite (`ml/evaluate.py`).

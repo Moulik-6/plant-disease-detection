@@ -38,19 +38,13 @@ from PIL import Image
 import imagehash
 import torch
 
-# ---------------------------------------------------------------------------
-# Setup sys.path to extend dataset.py and utils.py
-# ---------------------------------------------------------------------------
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(CURRENT_DIR) if os.path.basename(CURRENT_DIR) == "ml" else CURRENT_DIR
+# Ensure repository root is on sys.path
+_repo_root = str(Path(__file__).resolve().parents[2])
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
-if CURRENT_DIR not in sys.path:
-    sys.path.append(CURRENT_DIR)
-if PROJECT_ROOT not in sys.path:
-    sys.path.append(PROJECT_ROOT)
-
-from src.dataset import get_dataloaders
-from src.utils import load_config
+from ml.src.dataset import get_dataloaders
+from ml.src.utils import load_config
 
 
 def resolve_path(rel_or_abs_path: str) -> str:
@@ -105,7 +99,7 @@ def parse_args():
         description="Perceptual hash data leakage & train/test duplicate detection"
     )
     parser.add_argument(
-        "--config", type=str, default="ml/configs/config.yaml",
+        "--config", type=str, default="ml/legacy/config.yaml",
         help="Path to dataset configuration YAML file"
     )
     parser.add_argument(
