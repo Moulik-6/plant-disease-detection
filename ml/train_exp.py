@@ -56,7 +56,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score, f1_score
 import torch
 import torch.nn as nn
-from torchvision import transforms
+from torchvision import models, transforms
 import yaml
 
 # Ensure project root and ml/ directory are in sys.path
@@ -69,11 +69,13 @@ for _p in (_repo_root, _ml_dir):
 try:
     from ml.src.datasets import ManifestDataset, load_unified_class_to_idx
     from ml.src.models import build_model
+    from ml.src.model_zoo import build_any_model, load_checkpoint_model
     from ml.src.sampling import build_weighted_sampler
     from ml.src.utils import deep_update, set_seed
 except ImportError:
     from src.datasets import ManifestDataset, load_unified_class_to_idx
     from src.models import build_model
+    from src.model_zoo import build_any_model, load_checkpoint_model
     from src.sampling import build_weighted_sampler
     from src.utils import deep_update, set_seed
 
@@ -154,20 +156,20 @@ def resolve_channels_last(cfg_val: Any, architecture: str) -> bool:
     """
     Resolves channels_last setting from config (true, false, or "auto").
     "auto" resolves to:
-      - False when architecture starts with "efficientnet" (bf16 + channels_last fails in cuDNN on this torch build)
+      - False when architecture starts with "efficientnet" or "fusion"
       - True otherwise.
     """
     if isinstance(cfg_val, str):
         v = cfg_val.lower().strip()
         if v == "auto":
-            return not architecture.startswith("efficientnet")
+            return not (architecture.startswith("efficientnet") or architecture.startswith("fusion"))
         if v in ("true", "1", "yes"):
             return True
         if v in ("false", "0", "no"):
             return False
     elif isinstance(cfg_val, bool):
         return cfg_val
-    return not architecture.startswith("efficientnet")
+    return not (architecture.startswith("efficientnet") or architecture.startswith("fusion"))
 
 
 def resolve_precision(raw_precision: Any, use_cuda: bool) -> str:
@@ -294,6 +296,84 @@ def build_cosine_warmup_scheduler(
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
 
 
+def build_fusion_optimizer(
+    model: nn.Module,
+    epoch: int,
+    cfg: Dict[str, Any],
+    weight_decay: float = 1e-4,
+    min_lr: float = 1e-6,
+    total_epochs: int = 25,
+) -> Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler]:
+    """
+    Sets the stage for the model at given epoch, constructs the AdamW optimizer
+    and CosineAnnealingLR scheduler positioned at the right step.
+      - Stage 1 (epoch < stage1_epochs): head only at lr 1e-3
+      - Stage 2 (epoch >= stage1_epochs): backbones at fusion.stage2_lr_backbone and head at 1e-4
+    """
+    if isinstance(cfg, dict):
+        if "fusion" in cfg and isinstance(cfg["fusion"], dict):
+            fusion_cfg = cfg["fusion"]
+        else:
+            fusion_cfg = cfg
+    else:
+        fusion_cfg = {}
+
+    stage1_epochs = int(fusion_cfg.get("stage1_epochs", 4))
+    stage2_lr_backbone = float(fusion_cfg.get("stage2_lr_backbone", 1e-5))
+
+    if epoch < stage1_epochs:
+        model.set_stage(1)
+        trainable_params = [p for p in model.parameters() if p.requires_grad]
+        optimizer = torch.optim.AdamW(
+            trainable_params,
+            lr=1e-3,
+            weight_decay=weight_decay,
+        )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=max(1, stage1_epochs),
+            eta_min=min_lr,
+        )
+        for _ in range(epoch):
+            scheduler.step()
+    else:
+        model.set_stage(2)
+        stage2_epochs = max(1, total_epochs - stage1_epochs)
+        backbone_params = []
+        head_params = []
+        for name, param in model.named_parameters():
+            if not param.requires_grad:
+                continue
+            clean_name = name[7:] if name.startswith("module.") else name
+            if clean_name.startswith("efficientnet.") or clean_name.startswith("vit."):
+                backbone_params.append(param)
+            elif (
+                clean_name.startswith("head.")
+                or clean_name.startswith("proj_eff")
+                or clean_name.startswith("proj_vit")
+                or clean_name.startswith("gate")
+                or clean_name.startswith("classifier")
+            ):
+                head_params.append(param)
+            else:
+                head_params.append(param)
+
+        optimizer = torch.optim.AdamW([
+            {"params": backbone_params, "lr": stage2_lr_backbone, "weight_decay": weight_decay},
+            {"params": head_params, "lr": 1e-4, "weight_decay": weight_decay},
+        ])
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=stage2_epochs,
+            eta_min=min_lr,
+        )
+        steps_in_stage2 = epoch - stage1_epochs
+        for _ in range(max(0, steps_in_stage2)):
+            scheduler.step()
+
+    return optimizer, scheduler
+
+
 def get_git_commit() -> str:
     """Attempts to retrieve current git commit hash."""
     try:
@@ -399,6 +479,43 @@ def run_self_check(raw_precision: str = "auto") -> int:
     print(f"RUNNING SELF-CHECK: Model Building & Grad-CAM Checkpoint Compatibility (precision={check_precision})")
     print("=" * 60)
 
+    # Pretrained DEFAULT weights verification through build_any_model
+    print("-" * 60)
+    print("RUNNING SELF-CHECK: Pretrained DEFAULT Weights Verification (build_any_model)")
+    print("-" * 60)
+    for arch in ["resnet50", "efficientnet_v2_s", "vit_b_16"]:
+        try:
+            pt_cfg = {
+                "model": {
+                    "architecture": arch,
+                    "pretrained": True,
+                    "dropout": 0.2,
+                },
+                "dataset": {"img_size": 224}
+            }
+            pt_model = build_any_model(pt_cfg, num_classes=num_classes, pretrained=True)
+            tv_model = getattr(models, arch)(weights="DEFAULT")
+
+            if arch == "resnet50":
+                w_built = pt_model.conv1.weight
+                w_tv = tv_model.conv1.weight
+            elif arch == "efficientnet_v2_s":
+                w_built = pt_model.features[0][0].weight
+                w_tv = tv_model.features[0][0].weight
+            elif arch == "vit_b_16":
+                w_built = pt_model.conv_proj.weight
+                w_tv = tv_model.conv_proj.weight
+            else:
+                w_built = next(pt_model.parameters())
+                w_tv = next(tv_model.parameters())
+
+            assert torch.equal(w_built, w_tv), f"Early-layer weight mismatch for {arch} against torchvision DEFAULT"
+            del pt_model, tv_model
+            print(f"[{arch}] Pretrained check: PASS")
+        except Exception as e:
+            all_passed = False
+            print(f"[{arch}] Pretrained check: FAIL ({e})")
+
     for arch in architectures:
         try:
             model_cfg = {
@@ -413,7 +530,7 @@ def run_self_check(raw_precision: str = "auto") -> int:
             }
 
             # 1. Build model
-            model = build_model(test_config, num_classes=num_classes, pretrained=False)
+            model = build_any_model(test_config, num_classes=num_classes, pretrained=False)
 
             with tempfile.TemporaryDirectory() as tmp_dir:
                 best_pth_path = Path(tmp_dir) / f"best_{arch}.pth"
@@ -489,6 +606,158 @@ def run_self_check(raw_precision: str = "auto") -> int:
 
                 del dummy_images, dummy_targets, opt, crit, scaler
                 model = model.to("cpu")
+                torch.cuda.empty_cache()
+
+            print(f"[{arch}] Self-check: PASS")
+        except Exception as e:
+            all_passed = False
+            print(f"[{arch}] Self-check: FAIL ({e})")
+
+    # 4. Self-check for Fusion architectures (Stage 1 & Stage 2 steps, save and reload via model_zoo)
+    fusion_architectures = ["fusion_concat", "fusion_gated"]
+    for arch in fusion_architectures:
+        try:
+            mode = "concat" if arch == "fusion_concat" else "gated"
+            stage1_test_epochs = 4
+            stage2_lr_backbone = 1e-5
+            test_config = {
+                "model": {
+                    "architecture": arch,
+                    "mode": mode,
+                    "pretrained": False,
+                    "dropout": 0.3,
+                },
+                "fusion": {
+                    "stage1_epochs": stage1_test_epochs,
+                    "stage2_lr_backbone": stage2_lr_backbone,
+                },
+                "dataset": {"img_size": 224}
+            }
+
+            # 1. Build fusion model through model_zoo
+            model = build_any_model(test_config, num_classes=num_classes, pretrained=False)
+            device = torch.device("cuda" if cuda_available else "cpu")
+            model = model.to(device)
+            crit = nn.CrossEntropyLoss()
+
+            dummy_images = torch.randn(2, 3, 224, 224, device=device)
+            dummy_targets = torch.tensor([0, 1 % num_classes], device=device, dtype=torch.long)
+
+            # Test that build_fusion_optimizer works for epoch = 0, epoch = stage1_epochs - 1, and epoch = stage1_epochs + 1
+            t_cfg = {"fusion": {"stage1_epochs": stage1_test_epochs, "stage2_lr_backbone": stage2_lr_backbone}}
+            opt_e0, sched_e0 = build_fusion_optimizer(model, epoch=0, cfg=t_cfg, total_epochs=25)
+            assert model.stage == 1, f"Expected stage 1 for epoch=0, got {model.stage}"
+            assert len(opt_e0.param_groups) == 1, f"Expected 1 param group in stage 1, got {len(opt_e0.param_groups)}"
+            assert math.isclose(opt_e0.param_groups[0]["lr"], 1e-3), f"Expected lr 1e-3 in stage 1, got {opt_e0.param_groups[0]['lr']}"
+
+            opt_e_s1, sched_e_s1 = build_fusion_optimizer(model, epoch=stage1_test_epochs - 1, cfg=t_cfg, total_epochs=25)
+            assert model.stage == 1, f"Expected stage 1 for epoch={stage1_test_epochs - 1}, got {model.stage}"
+            assert len(opt_e_s1.param_groups) == 1, f"Expected 1 param group in stage 1, got {len(opt_e_s1.param_groups)}"
+
+            opt_e_s2, sched_e_s2 = build_fusion_optimizer(model, epoch=stage1_test_epochs + 1, cfg=t_cfg, total_epochs=25)
+            assert model.stage == 2, f"Expected stage 2 for epoch={stage1_test_epochs + 1}, got {model.stage}"
+            assert len(opt_e_s2.param_groups) == 2, f"Expected 2 param groups in stage 2, got {len(opt_e_s2.param_groups)}"
+            assert math.isclose(opt_e_s2.param_groups[0]["lr"], stage2_lr_backbone), f"Expected backbone lr {stage2_lr_backbone}, got {opt_e_s2.param_groups[0]['lr']}"
+            assert math.isclose(opt_e_s2.param_groups[1]["lr"], 1e-4), f"Expected head lr 1e-4, got {opt_e_s2.param_groups[1]['lr']}"
+
+            # 2. Stage 1 training step (head only, lr=1e-3)
+            opt1, _ = build_fusion_optimizer(model, epoch=0, cfg=test_config, total_epochs=25)
+            model.train()
+            # Assert that every module of model.efficientnet and model.vit has training == False
+            for m in model.efficientnet.modules():
+                assert not m.training, f"[{arch}] Stage 1 error: efficientnet submodule has training == True"
+            for m in model.vit.modules():
+                assert not m.training, f"[{arch}] Stage 1 error: vit submodule has training == True"
+
+            opt1.zero_grad(set_to_none=True)
+            scaler = torch.amp.GradScaler("cuda") if (check_precision == "fp16" and cuda_available) else None
+            if check_precision == "fp16" and cuda_available:
+                with torch.autocast(device_type="cuda", dtype=torch.float16):
+                    out1 = model(dummy_images)
+                    loss1 = crit(out1, dummy_targets)
+                if scaler is not None:
+                    scaler.scale(loss1).backward()
+                    scaler.unscale_(opt1)
+                    scaler.step(opt1)
+                    scaler.update()
+            else:
+                out1 = model(dummy_images)
+                loss1 = crit(out1, dummy_targets)
+                loss1.backward()
+                opt1.step()
+
+            # 3. Stage 2 training step (parameter groups: backbones at 1e-5, head at 1e-4)
+            opt2, _ = build_fusion_optimizer(model, epoch=stage1_test_epochs, cfg=test_config, total_epochs=25)
+            model.train()
+            # Assert no BatchNorm in model.efficientnet is training
+            for m in model.efficientnet.modules():
+                if isinstance(m, (nn.modules.batchnorm._BatchNorm, nn.BatchNorm2d, nn.BatchNorm1d)):
+                    assert not m.training, f"[{arch}] Stage 2 error: efficientnet BatchNorm has training == True"
+
+            # For fusion_gated print the parameter count and lr of each optimiser group and assert that proj_vit has lr 1e-4
+            if arch == "fusion_gated":
+                print(f"[{arch}] Stage 2 optimizer groups:")
+                proj_vit_params = set(model.proj_vit.parameters())
+                proj_vit_lr = None
+                for idx, grp in enumerate(opt2.param_groups):
+                    p_count = sum(p.numel() for p in grp["params"])
+                    lr = grp["lr"]
+                    print(f"  Group {idx}: {len(grp['params'])} tensors, {p_count:,} params, lr={lr}")
+                    if any(p in set(grp["params"]) for p in proj_vit_params):
+                        proj_vit_lr = lr
+                assert proj_vit_lr is not None, "proj_vit not found in any optimizer group"
+                assert math.isclose(proj_vit_lr, 1e-4), f"Expected proj_vit lr to be 1e-4, got {proj_vit_lr}"
+
+            opt2.zero_grad(set_to_none=True)
+            if check_precision == "fp16" and cuda_available:
+                with torch.autocast(device_type="cuda", dtype=torch.float16):
+                    out2 = model(dummy_images)
+                    loss2 = crit(out2, dummy_targets)
+                if scaler is not None:
+                    scaler.scale(loss2).backward()
+                    scaler.unscale_(opt2)
+                    scaler.step(opt2)
+                    scaler.update()
+            else:
+                out2 = model(dummy_images)
+                loss2 = crit(out2, dummy_targets)
+                loss2.backward()
+                opt2.step()
+
+            if mode == "gated":
+                assert model.last_gate_mean is not None, "Gated mode did not record mean gate value"
+
+            # 4. Save and reload through model_zoo
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                best_pth_path = Path(tmp_dir) / f"best_{arch}.pth"
+                best_payload = {
+                    "model_state": model.state_dict(),
+                    "architecture": arch,
+                    "mode": mode,
+                    "class_to_idx": class_to_idx,
+                    "config": {
+                        "model": {
+                            "architecture": arch,
+                            "mode": mode,
+                            "pretrained": False,
+                            "dropout": 0.3,
+                        },
+                        "dataset": {"img_size": 224}
+                    }
+                }
+                torch.save(best_payload, best_pth_path)
+
+                loaded_model, loaded_cfg, loaded_arch, loaded_c2i, _ = load_checkpoint_model(
+                    checkpoint_path=best_pth_path,
+                    device=torch.device("cpu")
+                )
+                assert loaded_model is not None, "Fusion model failed to load from checkpoint"
+                assert loaded_arch.lower() == arch.lower(), f"Arch mismatch: expected {arch}, got {loaded_arch}"
+                assert len(loaded_c2i) == num_classes, f"Class count mismatch: expected {num_classes}, got {len(loaded_c2i)}"
+
+            del dummy_images, dummy_targets, opt1, opt2, crit, scaler
+            model = model.to("cpu")
+            if cuda_available:
                 torch.cuda.empty_cache()
 
             print(f"[{arch}] Self-check: PASS")
@@ -590,22 +859,40 @@ def main():
     # 3. Model Architecture & Hardware / Training Rules
     model_cfg = config.get("model", {})
     architecture = str(model_cfg.get("architecture", "resnet50")).lower().strip()
+    is_fusion = architecture in ("fusion_concat", "fusion_gated")
     training_cfg = config.get("training", {})
 
     # Detect device early for precision resolution
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     use_cuda = device.type == "cuda"
 
-    raw_channels_last = training_cfg.get("channels_last", "auto")
-    use_channels_last = resolve_channels_last(raw_channels_last, architecture)
+    if is_fusion:
+        raw_channels_last = "false"
+        use_channels_last = False
+        training_cfg["channels_last"] = "false"
+        raw_precision = training_cfg.get("precision", "auto")
+        if raw_precision == "auto":
+            precision = "fp16" if use_cuda else "fp32"
+        else:
+            precision = resolve_precision(raw_precision, use_cuda)
+        training_cfg["precision"] = precision
+    else:
+        raw_channels_last = training_cfg.get("channels_last", "auto")
+        use_channels_last = resolve_channels_last(raw_channels_last, architecture)
+        raw_precision = training_cfg.get("precision", "auto")
+        precision = resolve_precision(raw_precision, use_cuda)
+        training_cfg["precision"] = precision
 
-    raw_precision = training_cfg.get("precision", "auto")
-    precision = resolve_precision(raw_precision, use_cuda)
-    training_cfg["precision"] = precision
+    fusion_cfg = config.get("fusion", {})
+    stage1_epochs = int(fusion_cfg.get("stage1_epochs", 4)) if is_fusion else 0
+    stage2_lr_backbone = float(fusion_cfg.get("stage2_lr_backbone", 1e-5)) if is_fusion else 1e-5
 
     logger.info("Resolved channels_last: %s (config: %s, architecture: %s)",
                 use_channels_last, raw_channels_last, architecture)
     logger.info("Resolved precision: %s (config: %s)", precision, raw_precision)
+    if is_fusion:
+        logger.info("Fusion configuration: stage1_epochs=%d (head lr=1e-3), stage2_lr_backbone=%.2e (head lr=1e-4)",
+                    stage1_epochs, stage2_lr_backbone)
 
     # Detect whether learning_rate is explicit: only if in child config or in --set
     has_explicit_lr_in_child = (
@@ -729,12 +1016,12 @@ def main():
         )
 
     # 7. Model Construction
-    model = build_model(config, num_classes=num_classes)
+    model = build_any_model(config, num_classes=num_classes)
 
     # Initial checkpoint loading (e.g. for fine-tuning)
     # Resolves architecture folder: resnet50 -> resnet50, efficientnet_v2_s -> efficientnet_v2, vit_b_16 -> vit
     init_ckpt = config.get("init_checkpoint") or model_cfg.get("init_checkpoint")
-    if init_ckpt:
+    if init_ckpt and not is_fusion:
         ARCH_TO_CKPT_FOLDER = {
             "resnet50": "resnet50",
             "efficientnet_v2_s": "efficientnet_v2",
@@ -778,14 +1065,35 @@ def main():
     grad_clip = float(training_cfg.get("gradient_clip", 1.0))
 
     criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr, weight_decay=weight_decay)
-    scheduler = build_cosine_warmup_scheduler(
-        optimizer=optimizer,
-        epochs=total_epochs,
-        warmup_epochs=warmup_epochs,
-        base_lr=base_lr,
-        min_lr=min_lr
-    )
+
+    # Determine start_epoch early if resuming
+    start_epoch = 0
+    resumed_from_epoch: Optional[int] = None
+    if resume_path:
+        ckpt_peek = torch.load(resume_path, map_location="cpu", weights_only=False)
+        resumed_from_epoch = int(ckpt_peek.get("epoch", 0))
+        start_epoch = resumed_from_epoch + 1
+        del ckpt_peek
+
+    if is_fusion:
+        optimizer, scheduler = build_fusion_optimizer(
+            model=model,
+            epoch=start_epoch,
+            cfg=config,
+            weight_decay=weight_decay,
+            min_lr=min_lr,
+            total_epochs=total_epochs,
+        )
+    else:
+        optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr, weight_decay=weight_decay)
+        scheduler = build_cosine_warmup_scheduler(
+            optimizer=optimizer,
+            epochs=total_epochs,
+            warmup_epochs=warmup_epochs,
+            base_lr=base_lr,
+            min_lr=min_lr,
+        )
+
     scaler = torch.amp.GradScaler("cuda") if (precision == "fp16" and use_cuda) else None
 
     # 9. Output Directory Setup
@@ -823,8 +1131,6 @@ def main():
             writer.writerow(csv_headers)
 
     # 10. Resume State Restoration
-    start_epoch = 0
-    resumed_from_epoch: Optional[int] = None
     best_metric = -float("inf")
     best_epoch = 0
     best_snapshot: Dict[str, Any] = {}
@@ -842,8 +1148,6 @@ def main():
                     scaler.load_state_dict(scaler_sd)
                 except Exception as e:
                     logger.warning("Failed to restore GradScaler state: %s", e)
-        resumed_from_epoch = int(ckpt_full.get("epoch", 0))
-        start_epoch = resumed_from_epoch + 1
         best_metric = ckpt_full.get("best_metric", -float("inf"))
         best_epoch = ckpt_full.get("best_epoch", 0)
 
@@ -904,12 +1208,29 @@ def main():
     for epoch in range(start_epoch, total_epochs):
         last_trained_epoch = epoch + 1
         epoch_t0 = time.time()
+
+        # Fusion Stage 2 Transition
+        if is_fusion and epoch == stage1_epochs:
+            logger.info("Transitioning FusionModel to Stage 2 (unfreezing last 2 blocks of EfficientNet, last 2 ViT layers + norm, lr_backbone=%.2e, lr_head=1e-4)",
+                        stage2_lr_backbone)
+            optimizer, scheduler = build_fusion_optimizer(
+                model=model,
+                epoch=epoch,
+                cfg=config,
+                weight_decay=weight_decay,
+                min_lr=min_lr,
+                total_epochs=total_epochs,
+            )
+
         model.train()
 
         train_loss_sum = 0.0
         train_samples = 0
         train_correct = 0
         distinct_field_indices: Set[int] = set()
+
+        epoch_gate_sum = 0.0
+        epoch_gate_count = 0
 
         last_log_time = epoch_t0
         last_log_samples = 0
@@ -945,6 +1266,11 @@ def main():
             else:  # fp32
                 outputs = model(images)
                 loss = criterion(outputs, targets)
+
+            if is_fusion and getattr(model, "mode", None) == "gated":
+                if getattr(model, "last_gate_mean", None) is not None:
+                    epoch_gate_sum += model.last_gate_mean
+                    epoch_gate_count += 1
 
             if scaler is not None:
                 scaler.scale(loss).backward()
@@ -1025,6 +1351,20 @@ def main():
 
         epoch_elapsed = round(time.time() - epoch_t0, 2)
 
+        # Logging stage and gate metrics for fusion models
+        current_stage = getattr(model, "stage", 1) if is_fusion else 1
+        avg_gate = (epoch_gate_sum / epoch_gate_count) if epoch_gate_count > 0 else (
+            getattr(model, "last_gate_mean", None) if is_fusion else None
+        )
+        if is_fusion:
+            if getattr(model, "mode", None) == "gated" and avg_gate is not None:
+                logger.info("Epoch [%d/%d] Fusion Stage: %d | Mean Gate Value: %.4f",
+                            epoch + 1, total_epochs, current_stage, avg_gate)
+                epoch_metrics["mean_gate"] = float(avg_gate)
+            else:
+                logger.info("Epoch [%d/%d] Fusion Stage: %d", epoch + 1, total_epochs, current_stage)
+            epoch_metrics["stage"] = current_stage
+
         # Logging to console
         val_summary_str = " | ".join(
             f"{k}={v:.4f}" for k, v in epoch_metrics.items() if "acc" in k or "macro_f1" in k
@@ -1054,13 +1394,17 @@ def main():
             "model": {
                 "architecture": architecture,
                 "pretrained": False,
-                "dropout": float(model_cfg.get("dropout", 0.2)),
+                "dropout": float(model_cfg.get("dropout", 0.3 if is_fusion else 0.2)),
                 "freeze_backbone": bool(model_cfg.get("freeze_backbone", False)),
             },
             "dataset": {
                 "img_size": img_size_val,
             },
         }
+        if is_fusion:
+            ckpt_config["model"]["mode"] = getattr(model, "mode", "concat")
+            if "fusion" in config:
+                ckpt_config["fusion"] = config["fusion"]
 
         # Save last.pth (full state for --resume)
         last_ckpt = {
@@ -1073,6 +1417,7 @@ def main():
             "best_metric": best_metric,
             "best_epoch": best_epoch,
             "architecture": architecture,
+            "mode": getattr(model, "mode", None) if is_fusion else None,
             "class_to_idx": class_to_idx,
             "config": ckpt_config,
             "full_config": config,
@@ -1105,7 +1450,9 @@ def main():
             # Save best.pth: state_dict, architecture, class_to_idx, and config
             best_payload = {
                 "state_dict": model.state_dict(),
+                "model_state": model.state_dict(),
                 "architecture": architecture,
+                "mode": getattr(model, "mode", None) if is_fusion else None,
                 "class_to_idx": class_to_idx,
                 "config": ckpt_config,
             }

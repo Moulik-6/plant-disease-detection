@@ -1,0 +1,45 @@
+# Experiment D: Gated Fusion Model (Gated Mode)
+# Combines EfficientNetV2-S (1280-d) and ViT-B/16 (768-d) backbones
+# via learned per-sample gating over 512-d projected representations.
+
+base: "base.yaml"
+exp_name: "d_fusion_gated"
+
+model:
+  architecture: "fusion_gated"
+  pretrained: true
+  dropout: 0.3
+
+fusion:
+  efficientnet_init: "runs/b_mixed_efficientnet_v2_s/<timestamp>/best.pth"
+  vit_init: "runs/b_mixed_vit_b_16/<timestamp>/best.pth"
+  stage1_epochs: 4
+  stage2_lr_backbone: 0.00001 # 1e-5
+
+dataset:
+  train_splits:
+    - "pv_train"
+    - "field_train"
+  val_splits:
+    - "field_val"
+    - "pv_val"
+
+sampling:
+  field_fraction: 0.5 # 50% field images per batch
+  class_balanced: false
+  num_samples: 20000
+
+augmentation: "field"
+
+selection:
+  metric: "field_val_macro_f1"
+
+training:
+  epochs: 20
+  batch_size: 32
+  channels_last: "false"
+  precision: "fp16"
+
+early_stopping:
+  enabled: true
+  patience: 5
