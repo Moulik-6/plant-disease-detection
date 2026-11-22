@@ -4,6 +4,7 @@ Model Evaluation and Comparison Pipeline for Plant Disease Detection.
 
 Evaluates trained model runs (and optional ensemble) across standard manifest-driven
 test sets:
+  - pv_clean_test (split column == pv_test and legacy_split == test, source plantvillage)
   - pv_test (split column == pv_test)
   - pv_legacy_test (legacy_split == test, source plantvillage)
   - field_test (split column == field_test)
@@ -41,7 +42,7 @@ For other_pool:
   - top 10 predicted classes (no accuracy)
 
 CLI:
-  python ml/eval_runs.py (--run runs/<exp>/<timestamp> | --checkpoint <path> --name <label>) [...] [--sets pv_test,field_test] [--ensemble] [--precision fp32|bf16] [--out <dir>]
+  python ml/eval_runs.py (--run runs/<exp>/<timestamp> | --checkpoint <path> --name <label>) [...] [--sets pv_clean_test,field_test] [--ensemble] [--precision fp32|bf16] [--out <dir>]
 """
 
 import argparse
@@ -77,6 +78,7 @@ try:
         ManifestDataset,
         load_unified_class_to_idx,
     )
+    from ml.src.model_zoo import build_any_model, load_checkpoint_model
 except ImportError:
     from gradcam import load_model_and_classes
     from src.datasets import (
@@ -85,11 +87,13 @@ except ImportError:
         ManifestDataset,
         load_unified_class_to_idx,
     )
+    from src.model_zoo import build_any_model, load_checkpoint_model
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("eval_runs")
 
 ALLOWED_SETS: Set[str] = {
+    "pv_clean_test",
     "pv_test",
     "pv_legacy_test",
     "field_test",
@@ -408,7 +412,12 @@ def build_dataset_for_split(
     manifest_p = Path(manifest_path).resolve()
 
     # Determine split configuration
-    if set_name == "pv_test":
+    if set_name == "pv_clean_test":
+        split_column = "split"
+        splits = ["pv_test"]
+        source_filter = ["plantvillage"]
+        filter_unmapped = True
+    elif set_name == "pv_test":
         split_column = "split"
         splits = ["pv_test"]
         source_filter = None
@@ -466,13 +475,18 @@ def build_dataset_for_split(
         r_idx = s.get("manifest_row_idx")
         row = manifest_rows.get(r_idx, {}) if r_idx is not None else {}
 
+        # For pv_clean_test, legacy_split must be 'test'
+        if set_name == "pv_clean_test":
+            if row.get("legacy_split", "").strip().lower() != "test":
+                continue
+
         pv_dup_raw = str(row.get("pv_dup", "0")).strip()
         is_pv_dup = pv_dup_raw in ("1", "true", "True")
 
         # Rule: rows with pv_dup=1 stay in the set only if their split says so
         if is_pv_dup:
             row_split = row.get("split", "").strip()
-            expected_split = "pv_test" if set_name == "pv_legacy_test" else set_name
+            expected_split = "pv_test" if set_name in ("pv_legacy_test", "pv_clean_test") else set_name
             if row_split != expected_split:
                 continue
 
@@ -491,6 +505,19 @@ def build_dataset_for_split(
     ds.labels = valid_labels
     ds.sources = valid_sources
     ds.is_field = valid_is_field
+
+    if set_name == "pv_clean_test":
+        n_images = len(ds.samples)
+        class_counts = Counter(s.get("unified_label") for s in ds.samples if s.get("unified_label"))
+        if class_to_idx:
+            counts = [class_counts.get(c, 0) for c in class_to_idx.keys()]
+        else:
+            counts = list(class_counts.values()) if class_counts else [0]
+        min_count = int(min(counts)) if counts else 0
+        med_count = float(np.median(counts)) if counts else 0.0
+        med_str = f"{int(med_count)}" if med_count.is_integer() else f"{med_count:.1f}"
+        print(f"pv_clean_test: {n_images} images, per-class min: {min_count}, median: {med_str}", flush=True)
+        logger.info("pv_clean_test: %d images, per-class min: %d, median: %s", n_images, min_count, med_str)
 
     return ds
 
@@ -631,8 +658,10 @@ def print_comparison_table(table_rows: List[Dict[str, Any]]) -> None:
     for r in table_rows:
         pv_top1_str = r.get("pv_top1")
         if pv_top1_str is None or pv_top1_str == "":
-            if r.get("pv_test_top1") is not None:
-                pv_top1_str = f"{r['pv_test_top1']:.4f}"
+            if r.get("pv_clean_test_top1") is not None:
+                pv_top1_str = f"{r['pv_clean_test_top1']:.4f} (clean)"
+            elif r.get("pv_test_top1") is not None:
+                pv_top1_str = f"{r['pv_test_top1']:.4f} (test)"
             elif r.get("pv_legacy_test_top1") is not None:
                 pv_top1_str = f"{r['pv_legacy_test_top1']:.4f} (legacy)"
             else:
@@ -729,7 +758,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Evaluate a single run on default sets (pv_test, field_test):
+  # Evaluate a single run on default sets (pv_clean_test, field_test):
   python ml/eval_runs.py --run runs/a_pv_only/20261120_120000
 
   # Evaluate a legacy PlantVillage checkpoint:
@@ -739,7 +768,7 @@ Examples:
   python ml/eval_runs.py \\
       --run runs/a_pv_only/20261120_120000 \\
       --checkpoint ml/checkpoints/resnet50/best_model.pth --name resnet50 \\
-      --sets pv_test,field_test \\
+      --sets pv_clean_test,field_test \\
       --ensemble
         """,
     )
@@ -770,8 +799,8 @@ Examples:
     parser.add_argument(
         "--sets",
         type=str,
-        default="pv_test,field_test",
-        help="Comma-separated dataset splits to evaluate (allowed: pv_test, pv_legacy_test, field_test, field_val, other_pool). Default: pv_test,field_test.",
+        default="pv_clean_test,field_test",
+        help="Comma-separated dataset splits to evaluate (allowed: pv_clean_test, pv_test, pv_legacy_test, field_test, field_val, other_pool). Default: pv_clean_test,field_test.",
     )
     parser.add_argument(
         "--ensemble",
@@ -947,11 +976,27 @@ Examples:
 
         logger.info("Loading model and checkpoint for '%s' from: %s", target_name, ckpt_path)
         fallback_cfg = "ml/configs/config.yaml"
-        model, loaded_cfg, arch, class_to_idx, idx_to_class = load_model_and_classes(
-            config_path=str(run_cfg_path if (run_cfg_path and run_cfg_path.exists()) else fallback_cfg),
-            checkpoint_path=str(ckpt_path),
-            device=device,
+
+        ckpt_raw = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
+        target_arch = (
+            ckpt_raw.get("architecture")
+            or ckpt_raw.get("config", {}).get("model", {}).get("architecture")
+            or run_cfg.get("model", {}).get("architecture", "")
         )
+        target_arch = str(target_arch).lower().strip()
+
+        if target_arch in ("fusion_concat", "fusion_gated"):
+            model, loaded_cfg, arch, class_to_idx, idx_to_class = load_checkpoint_model(
+                checkpoint_path=str(ckpt_path),
+                config=run_cfg,
+                device=device,
+            )
+        else:
+            model, loaded_cfg, arch, class_to_idx, idx_to_class = load_model_and_classes(
+                config_path=str(run_cfg_path if (run_cfg_path and run_cfg_path.exists()) else fallback_cfg),
+                checkpoint_path=str(ckpt_path),
+                device=device,
+            )
 
         # Merge configs for complete transform resolution (uses checkpoint's own config for preprocessing)
         merged_cfg = {**loaded_cfg, **run_cfg}
@@ -961,8 +1006,8 @@ Examples:
             class_mapping_ref = class_to_idx
             idx_mapping_ref = idx_to_class
 
-        # Determine channels_last: false for efficientnet architectures, true otherwise
-        use_channels_last = not arch.lower().startswith("efficientnet")
+        # Determine channels_last: false for efficientnet and fusion architectures, true otherwise
+        use_channels_last = not (arch.lower().startswith("efficientnet") or arch.lower().startswith("fusion"))
         if use_cuda and use_channels_last:
             model = model.to(memory_format=torch.channels_last)
 
@@ -971,6 +1016,21 @@ Examples:
         target_type = target.get("type")
         split_col = run_cfg.get("dataset", {}).get("split_column") or run_cfg.get("split_column")
         is_legacy_target = (target_type == "checkpoint") or (split_col == "legacy_split")
+
+        raw_init_ckpt = (
+            run_cfg.get("init_checkpoint")
+            or run_cfg.get("model", {}).get("init_checkpoint")
+        )
+        if not raw_init_ckpt and target.get("type") == "run":
+            raw_init_ckpt = (
+                merged_cfg.get("init_checkpoint")
+                or merged_cfg.get("model", {}).get("init_checkpoint")
+            )
+        has_init_checkpoint = bool(
+            target.get("type") == "run"
+            and raw_init_ckpt
+            and str(raw_init_ckpt).strip().lower() not in ("", "none", "null", "false")
+        )
 
         run_metrics_output: Dict[str, Any] = {
             "target": target_name,
@@ -990,6 +1050,7 @@ Examples:
         # Track row metrics for comparison table
         row_entry: Dict[str, Any] = {
             "name": target_name,
+            "pv_clean_test_top1": None,
             "pv_test_top1": None,
             "pv_legacy_test_top1": None,
             "pv_top1": "-",
@@ -1007,6 +1068,23 @@ Examples:
 
         for set_name in requested_sets:
             # Leakage Guard: Check for cross-split evaluation leaks
+            if has_init_checkpoint and set_name in ("pv_test", "pv_legacy_test"):
+                msg = (
+                    f"Target was initialised from a model that saw the legacy training split "
+                    f"(init_checkpoint: {raw_init_ckpt}); skipped {set_name} to prevent train/test data leakage."
+                )
+                banner = (
+                    "\n" + "!" * 78 + "\n"
+                    f"WARNING [Leakage Guard]: Target '{target_name}' was initialised from a model that saw\n"
+                    f"the legacy training split (init_checkpoint: {raw_init_ckpt}).\n"
+                    f"Skipping evaluation set '{set_name}' to prevent train/test data leakage.\n"
+                    + "!" * 78 + "\n"
+                )
+                print(banner, file=sys.stderr)
+                logger.warning("LEAKAGE GUARD: Target '%s' skipped set '%s': %s", target_name, set_name, msg)
+                skipped_sets[set_name] = msg
+                continue
+
             if is_legacy_target and set_name == "pv_test":
                 msg = "Target uses legacy PlantVillage split; skipped pv_test to prevent train/test data leakage."
                 banner = (
@@ -1077,7 +1155,9 @@ Examples:
             run_metrics_output["sets"][set_name] = set_metrics
 
             # Update comparison row
-            if set_name == "pv_test":
+            if set_name == "pv_clean_test":
+                row_entry["pv_clean_test_top1"] = set_metrics.get("top1_all")
+            elif set_name == "pv_test":
                 row_entry["pv_test_top1"] = set_metrics.get("top1_all")
             elif set_name == "pv_legacy_test":
                 row_entry["pv_legacy_test_top1"] = set_metrics.get("top1_all")
@@ -1091,8 +1171,10 @@ Examples:
         target["evaluated_sets"] = [s for s in requested_sets if s not in skipped_sets]
         run_metrics_output["skipped_sets"] = skipped_sets
 
-        if row_entry.get("pv_test_top1") is not None:
-            row_entry["pv_top1"] = f"{row_entry['pv_test_top1']:.4f}"
+        if row_entry.get("pv_clean_test_top1") is not None:
+            row_entry["pv_top1"] = f"{row_entry['pv_clean_test_top1']:.4f} (clean)"
+        elif row_entry.get("pv_test_top1") is not None:
+            row_entry["pv_top1"] = f"{row_entry['pv_test_top1']:.4f} (test)"
         elif row_entry.get("pv_legacy_test_top1") is not None:
             row_entry["pv_top1"] = f"{row_entry['pv_legacy_test_top1']:.4f} (legacy)"
         else:
@@ -1121,6 +1203,7 @@ Examples:
 
         ensemble_row: Dict[str, Any] = {
             "name": ensemble_name,
+            "pv_clean_test_top1": None,
             "pv_test_top1": None,
             "pv_legacy_test_top1": None,
             "pv_top1": "-",
@@ -1156,7 +1239,7 @@ Examples:
 
             sorted_groups = sorted(
                 groups.items(),
-                key=lambda item: (len(item[1]), "pv_test" in item[0], len(item[0])),
+                key=lambda item: (len(item[1]), "pv_clean_test" in item[0], "pv_test" in item[0], len(item[0])),
                 reverse=True,
             )
             chosen_sig, chosen_targets = sorted_groups[0]
@@ -1197,7 +1280,9 @@ Examples:
             ens_set_metrics["evaluated_sets_signature"] = list(chosen_sig)
             ensemble_metrics_output["sets"][set_name] = ens_set_metrics
 
-            if set_name == "pv_test":
+            if set_name == "pv_clean_test":
+                ensemble_row["pv_clean_test_top1"] = ens_set_metrics.get("top1_all")
+            elif set_name == "pv_test":
                 ensemble_row["pv_test_top1"] = ens_set_metrics.get("top1_all")
             elif set_name == "pv_legacy_test":
                 ensemble_row["pv_legacy_test_top1"] = ens_set_metrics.get("top1_all")
@@ -1208,8 +1293,10 @@ Examples:
             elif set_name == "other_pool":
                 ensemble_row["other_pool_conf_09"] = ens_set_metrics.get("share_confidence_ge_0.9")
 
-        if ensemble_row.get("pv_test_top1") is not None:
-            ensemble_row["pv_top1"] = f"{ensemble_row['pv_test_top1']:.4f}"
+        if ensemble_row.get("pv_clean_test_top1") is not None:
+            ensemble_row["pv_top1"] = f"{ensemble_row['pv_clean_test_top1']:.4f} (clean)"
+        elif ensemble_row.get("pv_test_top1") is not None:
+            ensemble_row["pv_top1"] = f"{ensemble_row['pv_test_top1']:.4f} (test)"
         elif ensemble_row.get("pv_legacy_test_top1") is not None:
             ensemble_row["pv_top1"] = f"{ensemble_row['pv_legacy_test_top1']:.4f} (legacy)"
         else:
