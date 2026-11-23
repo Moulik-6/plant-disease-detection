@@ -145,7 +145,7 @@ export SHUTDOWN="1"              # Automatically shutdown instance upon completi
 
 # Make script executable and launch
 chmod +x scripts/run_queue.sh
-./scripts/run_queue.sh
+./scripts/run_queue.sh scripts/queues/stage2_main.txt
 ```
 
 Detach from the session anytime with `Ctrl+B`, then `D`. Reattach with:

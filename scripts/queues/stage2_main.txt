@@ -1,0 +1,22 @@
+# ==============================================================================
+# scripts/queues/stage2_main.txt
+#
+# Primary Stage-II 9-experiment benchmark queue across three architectures:
+#   1. In-Domain PlantVillage Laboratory Baselines (a_pv_only)
+#   2. Mixed Domain Training (b_mixed)
+#   3. Sequential Fine-Tuning (c_finetune)
+#
+# Format: <experiment_config>:<architecture> [optional extra --set arguments]
+# ==============================================================================
+
+a_pv_only:resnet50
+a_pv_only:efficientnet_v2_s
+a_pv_only:vit_b_16
+
+b_mixed:resnet50
+b_mixed:efficientnet_v2_s
+b_mixed:vit_b_16
+
+c_finetune:resnet50
+c_finetune:efficientnet_v2_s
+c_finetune:vit_b_16

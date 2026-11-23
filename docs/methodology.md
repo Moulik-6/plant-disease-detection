@@ -1,6 +1,6 @@
 # Modeling, Training & Evaluation Methodology
 
-This document outlines the architectural configurations, optimization choices, precision handling, and evaluation protocol governing the Stage-II plant disease classification experiments.
+This document outlines the architectural configurations, optimization choices, precision handling, evaluation protocol, and modular code architecture governing the Stage-II plant disease classification experiments.
 
 ---
 
@@ -65,3 +65,55 @@ Evaluation is performed across partitions using [ml/evaluate.py](file:///c:/Majo
    - 1,000 resamples clustered by `group_id` so perceptual near-duplicates are not treated as independent observations.
 5. **Leakage Guard**:
    - Evaluator verifies that checkpoints initialized on legacy splits do not evaluate against `pv_test` or `pv_legacy_test`, automatically substituting `pv_clean_test`.
+
+---
+
+## 5. How the Code is Organised
+
+The repository separates data ingestion, sampling, model instantiation, training execution, and multi-run evaluation into distinct, single-responsibility components:
+
+### 1. Manifest Builder (`ml/data/build_manifest.py`)
+- **Reads**:
+  - Raw image trees (`data/plantvillage_dataset/color`, `data/plantdoc/PlantDoc-Dataset`, `data/plantwild/plantwild`).
+  - Taxonomic alignment YAML mappings (`ml/configs/mappings/plantdoc_map.yaml`, `ml/configs/mappings/plantwild_map.yaml`).
+  - Optional precomputed perceptual hashes from disk.
+- **Writes**:
+  - `data/manifest.csv`: The canonical dataset table storing relative file paths, unified labels, integer class indices, perceptual hash cluster IDs (`group_id`), cross-domain duplicate flags (`pv_dup`), and partition assignments (`split`, `legacy_split`).
+  - `data/manifest_report.json`: Cluster size distribution, class imbalance statistics, and partition integrity diagnostics.
+
+### 2. Domain-Balanced Sampler (`ml/src/sampling.py`)
+- **Reads**:
+  - Sample metadata (`labels`, `is_field` flags) from manifest-backed PyTorch datasets (`ml/src/datasets.py`).
+  - Sampling hyperparameters (`sampling.field_fraction`, `sampling.class_balanced`).
+- **Produces**:
+  - Normalized sampling weight tensors (`torch.DoubleTensor`) for PyTorch's `WeightedRandomSampler`, enforcing a fixed field image proportion per batch (e.g. 50% field / 50% laboratory) and optional inverse-square-root class frequency balancing without mutating underlying datasets.
+
+### 3. Model Zoo (`ml/src/model_zoo.py`)
+- **Reads**:
+  - Architecture strings, pretrained weights specifications, dropout rates, and backbone checkpoint paths (`fusion.efficientnet_init`, `fusion.vit_init`) from experiment configurations or checkpoint dictionaries.
+- **Produces / Writes**:
+  - Instantiates individual torchvision backbones (`resnet50`, `efficientnet_v2_s`, `vit_b_16`) via `ml/src/models.py` or late-fusion architectures (`fusion_concat`, `fusion_gated`) via `ml/src/fusion.py`.
+  - Safely deserializes checkpoints via `load_checkpoint_model()`, automatically purging initialization references to prevent circular reload dependencies.
+
+### 4. Unified Trainer (`ml/train.py`)
+- **Reads**:
+  - Experiment configuration hierarchy (`ml/configs/experiment/*.yaml` inheriting from `base.yaml`).
+  - Dataset manifest (`data/manifest.csv`) and optional pre-resized image cache (`data/cache_224/`).
+  - Optional resume/fine-tune checkpoints (`--resume` or `model.init_checkpoint`).
+- **Writes**:
+  - Timestamped run directories (`runs/<exp_name>_<architecture>/<timestamp>/`) containing:
+    - `config.yaml`: Fully resolved experiment configuration.
+    - `git_commit.txt`: Current repository commit SHA.
+    - `log.csv`: Per-epoch metrics across train loss and all validation partitions.
+    - `best.pth`: Compact checkpoint containing model `state_dict`, `architecture`, and `class_to_idx` selected by validation macro-F1.
+    - `last.pth`: Full recovery state including model weights, optimizer, AMP scaler, learning rate scheduler, epoch index, and RNG states.
+    - `metrics.json`: Final execution metrics, elapsed time, and system environment specifications.
+
+### 5. Multi-Run Evaluator (`ml/evaluate.py`)
+- **Reads**:
+  - One or more completed run directories (`--run runs/<run_dir>`) or baseline checkpoint files (`--checkpoint <ckpt_path> --name <label>`).
+  - Dataset manifest (`data/manifest.csv`) for target partitions (`pv_clean_test`, `field_test`, `field_val`, etc.).
+- **Writes**:
+  - Formatted cross-run comparison tables to stdout.
+  - Per-run evaluation records in `runs/<run_dir>/eval/metrics.json` and `eval_report.json`.
+  - Consolidated multi-model comparison summaries (`comparison_table.txt`) and ensembled evaluation reports (`metrics.json`) under the designated `--out` directory.

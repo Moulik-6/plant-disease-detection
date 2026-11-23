@@ -55,7 +55,17 @@ python ml/data/make_cache.py \
 
 ## 3. Training Commands
 
-### Regime A: PlantVillage-Only Baselines
+### Automated Queue Execution (All 9 Core Experiments)
+To run all 9 baseline and mixed experiments sequentially with automatic S3 syncing and timeout management:
+```bash
+export S3_BUCKET="<your-bucket-name>"
+chmod +x scripts/run_queue.sh
+./scripts/run_queue.sh scripts/queues/stage2_main.txt
+```
+
+### Manual Experiment Commands
+
+#### Regime A: PlantVillage-Only Baselines
 ```bash
 # ResNet-50
 python ml/train.py --exp ml/configs/experiment/a_pv_only.yaml --set model.architecture=resnet50

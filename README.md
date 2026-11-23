@@ -52,19 +52,22 @@ plant-disease-detection/
 │   │   └── benchmark_latency.py       # Single-image CPU inference latency profiler
 │   ├── legacy/                        # Archived Stage-I pipeline and presets
 │   ├── checkpoints/                   # Checkpoint storage directory (git-ignored)
-│   ├── results/                       # Consolidated benchmark reports and metrics JSON
 │   ├── train.py                       # Unified Stage-II experiment training pipeline
 │   ├── evaluate.py                    # Multi-run evaluation & ensembling suite
 │   └── requirements.txt               # Production Python dependencies
+├── results/                           # Tracked evaluation metrics & reports
+│   ├── README.md                      # Index of tracked result files
+│   ├── stage1/                        # Archived Stage-I evaluation metrics & latency
+│   └── stage2/                        # Stage-II evaluation outputs & comparison tables
 ├── scripts/                           # Execution scripts & infrastructure guides
-│   ├── run_queue.sh                   # Sequential 9-experiment queue runner with S3 sync
+│   ├── run_queue.sh                   # Queue runner reading experiment specs from file
+│   ├── queues/                        # Experiment queue text files (stage2_main.txt)
 │   └── aws_setup.md                   # Cloud GPU provisioning and execution guide
 ├── docs/                              # In-depth architectural & methodology documentation
 │   ├── data.md                        # Dataset harmonization, schema, and split design
 │   ├── methodology.md                 # Training configurations, precision, and metrics
 │   ├── reproduce.md                   # Step-by-step reproduction guide
-│   ├── results.md                     # Comprehensive result tables with bootstrap intervals
-│   └── REORG_PLAN.md                  # Reorganization roadmap and history
+│   └── results.md                     # Comprehensive result tables with bootstrap intervals
 ├── tests/                             # Unit tests with synthetic data
 ├── NOTICE.md                          # Dataset licenses and redistribution warnings
 ├── LICENSE                            # MIT License for source code
@@ -131,7 +134,7 @@ To replicate all 9 core experiments across ResNet-50, EfficientNetV2-S, and ViT-
    ```bash
    export S3_BUCKET="<your-bucket-name>"
    chmod +x scripts/run_queue.sh
-   ./scripts/run_queue.sh
+   ./scripts/run_queue.sh scripts/queues/stage2_main.txt
    ```
 
 3. **Consolidated Multi-Run Evaluation & Ensembling**:

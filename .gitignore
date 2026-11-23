@@ -26,19 +26,23 @@ ml/checkpoints/
 *.pth
 
 # ==============================================================================
-# Results & Visualizations (Ignore generated outputs except tracked reports)
+# Results & Visualizations
 # ==============================================================================
 ml/visualizations/
 ml/results_smoke/
-ml/results/*
-!ml/results/metrics.json
-!ml/results/latency.json
-!ml/results/leakage_metrics.json
-!ml/results/per_class_metrics.csv
-!ml/results/plantdoc/
-ml/results/plantdoc/*
-!ml/results/plantdoc/metrics.json
-!ml/results/plantdoc/analysis.json
+ml/results/
+
+# In results/, track only json, csv, and png files, plus README.md and .gitkeep
+results/*
+!results/**/
+!results/**/*.json
+!results/*.json
+!results/**/*.csv
+!results/*.csv
+!results/**/*.png
+!results/*.png
+!results/README.md
+!results/.gitkeep
 
 # ==============================================================================
 # Editors & IDEs
