@@ -625,13 +625,15 @@ def save_predictions_csv(
 def print_comparison_table(table_rows: List[Dict[str, Any]]) -> None:
     """
     Prints a comparison table to the console:
-      Columns: Run / Model, pv top-1, field_test Top-1, field_test Macro-F1,
-               field_test ECE, other_pool Conf>=0.9.
+      Columns: Run / Model, pv top-1, field_test Top-1, doc top-1, wild top-1,
+               field_test Macro-F1, field_test ECE, other_pool Conf>=0.9.
     """
     headers = [
         "Run / Model",
         "pv top-1",
         "field_test Top-1",
+        "doc top-1",
+        "wild top-1",
         "field_test Macro-F1",
         "field_test ECE",
         "other_pool Conf>=0.9",
@@ -659,6 +661,8 @@ def print_comparison_table(table_rows: List[Dict[str, Any]]) -> None:
             r.get("name", "Unknown"),
             pv_top1_str,
             fmt_val(r.get("field_test_top1")),
+            fmt_val(r.get("doc_top1")),
+            fmt_val(r.get("wild_top1")),
             fmt_val(r.get("field_test_macro_f1")),
             fmt_val(r.get("field_test_ece")),
             fmt_val(r.get("other_pool_conf_09")),
@@ -1043,6 +1047,8 @@ Examples:
             "pv_legacy_test_top1": None,
             "pv_top1": "-",
             "field_test_top1": None,
+            "doc_top1": None,
+            "wild_top1": None,
             "field_test_macro_f1": None,
             "field_test_ece": None,
             "other_pool_conf_09": None,
@@ -1153,6 +1159,13 @@ Examples:
                 row_entry["field_test_top1"] = set_metrics.get("top1_all")
                 row_entry["field_test_macro_f1"] = set_metrics.get("macro_f1")
                 row_entry["field_test_ece"] = set_metrics.get("ece")
+                by_source = set_metrics.get("by_source", {})
+                doc_m = by_source.get("plantdoc", {})
+                if doc_m.get("num_samples", 0) > 0:
+                    row_entry["doc_top1"] = doc_m.get("top1_all")
+                wild_m = by_source.get("plantwild", {})
+                if wild_m.get("num_samples", 0) > 0:
+                    row_entry["wild_top1"] = wild_m.get("top1_all")
             elif set_name == "other_pool":
                 row_entry["other_pool_conf_09"] = set_metrics.get("share_confidence_ge_0.9")
 
@@ -1196,6 +1209,8 @@ Examples:
             "pv_legacy_test_top1": None,
             "pv_top1": "-",
             "field_test_top1": None,
+            "doc_top1": None,
+            "wild_top1": None,
             "field_test_macro_f1": None,
             "field_test_ece": None,
             "other_pool_conf_09": None,
@@ -1278,6 +1293,13 @@ Examples:
                 ensemble_row["field_test_top1"] = ens_set_metrics.get("top1_all")
                 ensemble_row["field_test_macro_f1"] = ens_set_metrics.get("macro_f1")
                 ensemble_row["field_test_ece"] = ens_set_metrics.get("ece")
+                by_source = ens_set_metrics.get("by_source", {})
+                doc_m = by_source.get("plantdoc", {})
+                if doc_m.get("num_samples", 0) > 0:
+                    ensemble_row["doc_top1"] = doc_m.get("top1_all")
+                wild_m = by_source.get("plantwild", {})
+                if wild_m.get("num_samples", 0) > 0:
+                    ensemble_row["wild_top1"] = wild_m.get("top1_all")
             elif set_name == "other_pool":
                 ensemble_row["other_pool_conf_09"] = ens_set_metrics.get("share_confidence_ge_0.9")
 

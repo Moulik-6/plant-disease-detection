@@ -1,0 +1,9 @@
+# Experiment E: Leave-One-Source-Out (Exclude PlantWild)
+# Mixed training excluding plantwild to evaluate generalization on unseen field sources.
+
+base: "b_mixed.yaml"
+exp_name: "e_exclude_plantwild"
+
+dataset:
+  exclude_sources:
+    - "plantwild"

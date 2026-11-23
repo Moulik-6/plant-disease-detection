@@ -117,3 +117,29 @@ The repository separates data ingestion, sampling, model instantiation, training
   - Formatted cross-run comparison tables to stdout.
   - Per-run evaluation records in `runs/<run_dir>/eval/metrics.json` and `eval_report.json`.
   - Consolidated multi-model comparison summaries (`comparison_table.txt`) and ensembled evaluation reports (`metrics.json`) under the designated `--out` directory.
+
+---
+
+## 6. Ablation & Generalization Framework
+
+To isolate the factors contributing to real-world generalization and model calibration, the benchmark structures experiments into targeted ablations addressing specific research questions:
+
+| Experiment Code | Configuration | Training Data / Augmentation | Target Research Question |
+| :--- | :--- | :--- | :--- |
+| **A (Laboratory Baseline)** | `a_pv_only.yaml` | PlantVillage only (`standard` aug) | *What is the baseline out-of-domain degradation when models trained on uniform laboratory conditions encounter real-world field imagery?* |
+| **A + Field Augmentation** | `a_field_aug.yaml` | PlantVillage only (`field` aug, label smoothing 0.1) | *Can aggressive domain-randomizing augmentations (TrivialAugmentWide, blur, color jitter) compensate for the complete absence of in-domain field imagery during training?* |
+| **B (Mixed Domain)** | `b_mixed.yaml` | PlantVillage + Field ($50\%$ fixed batch fraction) | *Does balanced multi-domain co-training recover field accuracy and calibration while preserving high laboratory performance?* |
+| **C (Sequential Fine-Tuning)** | `c_finetune.yaml` | Field fine-tune with $20\%$ PV replay | *Does pretraining on clean laboratory features followed by field adaptation match or outperform end-to-end joint training?* |
+| **E (Leave-One-Source-Out)** | `e_exclude_plantwild.yaml`<br>`e_exclude_plantdoc.yaml` | Mixed training excluding PlantWild or PlantDoc | *Does field domain performance generalize to entirely unseen field data collections, or does the network overfit to source-specific capture characteristics and background distributions?* |
+| **D (Multi-Backbone Fusion)** | `d_fusion_concat.yaml`<br>`d_fusion_gated.yaml` | Two-stage late fusion of EfficientNetV2-S + ViT-B/16 | *Do complementary inductive biases (local CNN textures vs. global ViT patch attention) yield superior field discrimination and calibration compared to single-backbone baselines?* |
+
+### Detailed Research Objectives
+
+1. **Ablation A vs. A + Field Aug (`a_field_aug`)**:
+   - Isolates the effect of data augmentation from data distribution. If `a_field_aug` yields significant gains on `field_test`, domain shift is partly driven by pixel-level texture and lighting variations. If it fails to close the gap, the shift is primarily semantic (e.g., complex backgrounds, multiple leaves, varied viewpoints, occlusions).
+2. **Ablation A vs. B & C**:
+   - Quantifies the value of real field samples versus laboratory pretraining, demonstrating how supervised domain balancing mitigates catastrophic domain shift.
+3. **Leave-One-Source-Out Generalization (E)**:
+   - Configured via `dataset.exclude_sources: [plantwild]` or `dataset.exclude_sources: [plantdoc]`. By training on mixed data without source $S$ while leaving evaluation on source $S$ intact in `field_test`, the evaluator's `doc top-1` and `wild top-1` metrics directly measure true cross-collection generalization without intra-collection leakage.
+4. **Multi-Backbone Late Fusion (D)**:
+   - Compares static concatenation against learned dynamic gating $g \cdot a + (1-g) \cdot b$. Measures whether combining convolutional feature extractors with transformer self-attention resolves ambiguous field symptoms better than scaling an individual backbone family.

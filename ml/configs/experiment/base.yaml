@@ -13,6 +13,9 @@ sources:
 cache_dir: "data/cache"
 use_cache: true
 
+dataset:
+  exclude_sources: []
+
 # Image Preprocessing & Augmentation
 img_size: 224
 preprocess: "squash" # squash | crop

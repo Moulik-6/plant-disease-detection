@@ -1,0 +1,10 @@
+# ==============================================================================
+# scripts/queues/stage2_fusion.txt
+#
+# Stage-II Multi-Backbone Late Fusion Queue:
+#   - d_fusion_concat: Concatenation fusion initialized from trained backbones
+#   - d_fusion_gated: Gated sigmoid fusion initialized from trained backbones
+# ==============================================================================
+
+d_fusion_concat:fusion_concat --set fusion.efficientnet_init=runs/b_mixed_efficientnet_v2_s/20261121_122244/best.pth fusion.vit_init=runs/b_mixed_vit_b_16/20261121_134843/best.pth
+d_fusion_gated:fusion_gated --set fusion.efficientnet_init=runs/b_mixed_efficientnet_v2_s/20261121_122244/best.pth fusion.vit_init=runs/b_mixed_vit_b_16/20261121_134843/best.pth

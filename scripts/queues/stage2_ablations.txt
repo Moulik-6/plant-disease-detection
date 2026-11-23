@@ -1,0 +1,12 @@
+# ==============================================================================
+# scripts/queues/stage2_ablations.txt
+#
+# Stage-II Ablations & Leave-One-Source-Out Generalization Queue:
+#   - a_field_aug: PlantVillage data with field augmentations & label smoothing
+#   - e_exclude_plantwild: Mixed training excluding plantwild images
+#   - e_exclude_plantdoc: Mixed training excluding plantdoc images
+# ==============================================================================
+
+a_field_aug:resnet50
+e_exclude_plantwild:efficientnet_v2_s
+e_exclude_plantdoc:efficientnet_v2_s

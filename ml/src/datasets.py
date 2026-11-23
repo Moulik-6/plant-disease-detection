@@ -75,6 +75,7 @@ class ManifestDataset(Dataset):
         filter_unmapped: bool = True,
         split_column: str = "split",
         source_filter: Optional[Union[str, List[str], Set[str]]] = None,
+        exclude_sources: Optional[Union[str, List[str], Set[str]]] = None,
     ):
         super().__init__()
         self.manifest_path = Path(manifest_path).resolve()
@@ -114,11 +115,20 @@ class ManifestDataset(Dataset):
         else:
             self.allowed_sources = {s.lower().strip() for s in source_filter}
 
+        if exclude_sources is None:
+            self.excluded_sources: Optional[Set[str]] = None
+        elif isinstance(exclude_sources, str):
+            self.excluded_sources = {exclude_sources.lower().strip()}
+        else:
+            self.excluded_sources = {s.lower().strip() for s in exclude_sources if s}
+
         # 4. Load and filter manifest
         self.samples: List[Dict[str, Any]] = []
         self.labels: List[int] = []
         self.sources: List[str] = []
         self.is_field: List[bool] = []
+        self.excluded_by_split: Dict[str, int] = {}
+        self.num_excluded: int = 0
 
         if not self.manifest_path.exists():
             logger.warning("Manifest CSV not found on disk at: %s", self.manifest_path)
@@ -133,6 +143,10 @@ class ManifestDataset(Dataset):
 
                 source_name = row.get("source", "").lower().strip()
                 if self.allowed_sources is not None and source_name not in self.allowed_sources:
+                    continue
+
+                if self.excluded_sources and source_name in self.excluded_sources:
+                    self.excluded_by_split[split_name] = self.excluded_by_split.get(split_name, 0) + 1
                     continue
 
                 unified_label = row.get("unified_label", "").strip()
@@ -162,6 +176,14 @@ class ManifestDataset(Dataset):
                 self.labels.append(label_idx)
                 self.sources.append(source_name)
                 self.is_field.append(is_field_img)
+
+        self.num_excluded = sum(self.excluded_by_split.values())
+        if self.num_excluded > 0:
+            for sp_name, cnt in sorted(self.excluded_by_split.items()):
+                logger.info(
+                    "ManifestDataset: removed %d images from split '%s' (exclude_sources=%s)",
+                    cnt, sp_name, sorted(list(self.excluded_sources))
+                )
 
         logger.info(
             "ManifestDataset initialized with %d samples (splits: %s)",
@@ -228,6 +250,7 @@ class ManifestDataset(Dataset):
         class_to_idx: Optional[Dict[str, int]] = None,
         split_column: Optional[str] = None,
         source_filter: Optional[Union[str, List[str]]] = None,
+        exclude_sources: Optional[Union[str, List[str], Set[str]]] = None,
     ) -> "ManifestDataset":
         """Instantiates ManifestDataset directly from an experiment config dictionary."""
         dataset_cfg = config.get("dataset", {})
@@ -239,6 +262,8 @@ class ManifestDataset(Dataset):
             split_column = dataset_cfg.get("split_column", "split")
         if source_filter is None:
             source_filter = dataset_cfg.get("source_filter", None)
+        if exclude_sources is None:
+            exclude_sources = dataset_cfg.get("exclude_sources", None)
 
         if class_to_idx is None:
             unified_yaml = config.get("unified_classes", DEFAULT_UNIFIED_CLASSES_YAML)
@@ -254,4 +279,5 @@ class ManifestDataset(Dataset):
             filter_unmapped=True,
             split_column=split_column,
             source_filter=source_filter,
+            exclude_sources=exclude_sources,
         )

@@ -938,6 +938,9 @@ def main():
     val_splits = dataset_cfg.get("val_splits") or config.get("val_splits", ["field_val", "pv_val"])
     split_column = dataset_cfg.get("split_column", "split")
     source_filter = dataset_cfg.get("source_filter", None)
+    exclude_sources = dataset_cfg.get("exclude_sources", []) or []
+    if isinstance(exclude_sources, str):
+        exclude_sources = [exclude_sources]
 
     # DataLoader worker configuration: default 6 on Linux, 0 on Windows
     is_windows = (sys.platform == "win32") or (os.name == "nt")
@@ -970,7 +973,11 @@ def main():
         filter_unmapped=True,
         split_column=split_column,
         source_filter=source_filter,
+        exclude_sources=exclude_sources,
     )
+    if train_dataset.num_excluded > 0:
+        for sp_name, cnt in sorted(train_dataset.excluded_by_split.items()):
+            logger.info("Training split '%s': removed %d images (exclude_sources=%s)", sp_name, cnt, exclude_sources)
 
     # WeightedRandomSampler for field-fraction and class-balancing
     train_sampler = build_weighted_sampler(train_dataset, config=config)
@@ -998,7 +1005,11 @@ def main():
             filter_unmapped=True,
             split_column=split_column,
             source_filter=source_filter,
+            exclude_sources=exclude_sources,
         )
+        if v_ds.num_excluded > 0:
+            for sp_name, cnt in sorted(v_ds.excluded_by_split.items()):
+                logger.info("Validation split '%s': removed %d images (exclude_sources=%s)", sp_name, cnt, exclude_sources)
         val_loaders[v_split] = torch.utils.data.DataLoader(
             v_ds,
             batch_size=batch_size,

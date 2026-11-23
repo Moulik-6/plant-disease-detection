@@ -1,0 +1,17 @@
+# Experiment A (Field Augmentation Ablation)
+# PlantVillage-only training data with field-style augmentations and label smoothing.
+
+base: "a_pv_only.yaml"
+exp_name: "a_field_aug"
+
+augmentation: "field"
+
+training:
+  epochs: 25
+  label_smoothing: 0.1
+
+early_stopping:
+  patience: 7
+
+selection:
+  metric: "pv_val_macro_f1"

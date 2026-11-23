@@ -1,0 +1,9 @@
+# Experiment E: Leave-One-Source-Out (Exclude PlantDoc)
+# Mixed training excluding plantdoc to evaluate generalization on unseen field sources.
+
+base: "b_mixed.yaml"
+exp_name: "e_exclude_plantdoc"
+
+dataset:
+  exclude_sources:
+    - "plantdoc"
