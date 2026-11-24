@@ -5,6 +5,7 @@ weakest class filtering, contact sheet generation, and fusion Grad-CAM skip logi
 """
 
 import csv
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -238,7 +239,9 @@ def test_full_pipeline_cli_execution(synthetic_predictions_dir, tmp_path):
         "--manifest", str(synthetic_predictions_dir["manifest_file"]),
     ]
 
-    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    res = subprocess.run(cmd, capture_output=True, text=True, check=True, env=env)
     assert "ERROR ANALYSIS SUMMARY: FIELD_TEST" in res.stdout
     assert "Tomato___Late_blight" in res.stdout
     assert "Tomato___Early_blight" in res.stdout

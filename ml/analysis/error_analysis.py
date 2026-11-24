@@ -22,6 +22,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image, ImageOps, ImageDraw
 
+# Reconfigure stdout/stderr to utf-8 if supported to prevent Windows cp1252 charmap errors
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if sys.stderr and hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 # Ensure repo root is in sys.path
 _repo_root = Path(__file__).resolve().parents[2]
 if str(_repo_root) not in sys.path:
@@ -583,7 +595,7 @@ def run_gradcam_diagnostics(
             ax3.axis("off")
 
             status_str = "CORRECT" if sample_item["correct"] == 1 else "WRONG"
-            fig.suptitle(f"{status_str} Prediction — Group: {sample_item.get('group_id', '')}", fontsize=10, fontweight="bold")
+            fig.suptitle(f"{status_str} Prediction - Group: {sample_item.get('group_id', '')}", fontsize=10, fontweight="bold")
             plt.tight_layout()
 
             out_panel = gradcam_dir / f"{prefix}_{idx:02d}.png"
@@ -656,7 +668,7 @@ def generate_summary_markdown(
         "",
         "---",
         "",
-        "## 3. Ten Weakest Classes (≥ 15 Test Samples)",
+        "## 3. Ten Weakest Classes (>= 15 Test Samples)",
         "",
         "| Rank | Class Name | Samples | Correct | Errors | Recall |",
         "|---|---|---|---|---|---|",
@@ -717,7 +729,7 @@ def print_console_tables(
         p_short = (p['pred_label'][:28] + '..') if len(p['pred_label']) > 30 else p['pred_label']
         print(f"#{p['rank']:<4} {t_short:<30} {p_short:<30} {p['count']:>6} {p['share_pct']:>7.2f}% {p['cum_share_pct']:>7.2f}%")
 
-    print(f"\n[10 Weakest Classes (≥ 15 Test Samples)]")
+    print(f"\n[10 Weakest Classes (>= 15 Test Samples)]")
     print(f"{'Rank':<5} {'Class Name':<42} {'Samples':>8} {'Correct':>8} {'Recall':>9}")
     print("-" * 76)
     for rank, c in enumerate(weakest_classes, start=1):
