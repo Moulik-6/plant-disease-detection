@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#15803d">
+  <title>AgriScan - Plant Disease Detection</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand-wrapper">
+        <span class="brand-icon">🌿</span>
+        <div>
+          <h1 class="app-title" data-i18n="app_title">AgriScan - Plant Disease Detection</h1>
+          <p class="app-subtitle" data-i18n="app_subtitle">Field-Resilient Crop Disease Screening & Differential Diagnosis</p>
+        </div>
+      </div>
+      <div class="lang-selector">
+        <select id="lang-select" aria-label="Language selection">
+          <option value="en">English</option>
+          <option value="te">తెలుగు</option>
+          <option value="hi">हिन्दी</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- Caution Banner -->
+    <div class="caution-banner">
+      <span class="caution-icon">⚠️</span>
+      <span data-i18n="caution_banner">Field accuracy is lower than lab accuracy; inspect symptoms in person before treating.</span>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs" role="tablist">
+      <button class="tab-btn active" id="tab-btn-diagnose" data-i18n="tab_diagnose" role="tab" aria-selected="true">Diagnose</button>
+      <button class="tab-btn" id="tab-btn-history" data-i18n="tab_history" role="tab" aria-selected="false">History</button>
+    </nav>
+
+    <!-- TAB 1: DIAGNOSE -->
+    <main id="tab-diagnose" class="tab-content active" role="tabpanel">
+      <!-- Image Upload & Camera Inputs -->
+      <section class="card upload-zone">
+        <p class="text-muted" data-i18n="select_prompt">Snap a clear photo of the affected plant leaf or choose an existing photo</p>
+        <div class="action-buttons">
+          <button class="btn btn-primary" id="btn-camera">
+            <span>📷</span>
+            <span data-i18n="take_photo">Take Photo</span>
+          </button>
+          <button class="btn btn-secondary" id="btn-upload">
+            <span>📁</span>
+            <span data-i18n="upload_file">Upload Image</span>
+          </button>
+        </div>
+        <!-- Hidden file inputs -->
+        <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none">
+        <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" style="display:none">
+
+        <!-- Preview -->
+        <div class="preview-container" id="preview-wrapper">
+          <img id="image-preview" src="" alt="Selected Leaf Preview">
+          <div class="classify-box">
+            <button class="btn btn-primary" id="btn-classify">
+              <span id="classify-btn-text" data-i18n="classify_button">Analyze Crop Health</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Results Card -->
+      <section class="card results-card" id="results-card">
+        <div class="result-header">
+          <span class="status-badge" id="result-status-badge"></span>
+          <span class="text-muted" id="result-latency" style="font-size: 0.75rem;"></span>
+        </div>
+
+        <h2 class="primary-diagnosis-title" id="result-primary-title"></h2>
+        <div class="crop-meta" id="result-crop-meta"></div>
+
+        <!-- Confidence Progress Bar -->
+        <div class="confidence-box">
+          <div class="confidence-header">
+            <span data-i18n="confidence_label">Model Confidence</span>
+            <span id="result-confidence-val">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="result-progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Top 3 Differential Diagnoses -->
+        <div class="differential-section">
+          <h3 class="section-subtitle" data-i18n="differential_diagnoses">Top 3 Differential Diagnoses</h3>
+          <div class="diff-list" id="diff-list-container"></div>
+        </div>
+
+        <!-- Grad-CAM Saliency Explanation -->
+        <div class="gradcam-section">
+          <div class="gradcam-toggle-row">
+            <span class="section-subtitle" style="margin: 0;" data-i18n="gradcam_toggle">Grad-CAM Saliency Explanation</span>
+            <label class="switch" aria-label="Toggle Grad-CAM visualization">
+              <input type="checkbox" id="gradcam-toggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="gradcam-viewers" id="gradcam-viewers">
+            <div class="viewer-pane">
+              <span data-i18n="original_image">Original Photo</span>
+              <img id="gradcam-orig-img" src="" alt="Original Photo">
+            </div>
+            <div class="viewer-pane">
+              <span data-i18n="gradcam_overlay">Model Attention Heatmap</span>
+              <img id="gradcam-overlay-img" src="" alt="Grad-CAM Overlay">
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- TAB 2: HISTORY -->
+    <section id="tab-history" class="tab-content" role="tabpanel">
+      <div class="card">
+        <div class="history-controls">
+          <h2 class="section-subtitle" style="margin: 0;" data-i18n="history_heading">Recent In-Field Scans</h2>
+          <button class="btn btn-secondary" id="btn-clear-history" style="min-height: 36px; padding: 6px 12px; font-size: 0.8rem; width: auto;" data-i18n="clear_history">
+            Clear History
+          </button>
+        </div>
+        <div id="history-container">
+          <div class="empty-state" data-i18n="history_empty">No prior scans recorded yet.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

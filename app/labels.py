@@ -1,48 +1,57 @@
 """
-Label parsing and taxonomic formatting for unified PlantVillage disease classes.
+Label parser and taxonomic metadata for Plant Disease Detection.
+Converts unified dataset labels (e.g., 'Tomato___Late_blight') into human-readable
+crop names, condition descriptions, and binary health indicators.
 """
 
-from typing import Any, Dict, List, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+import yaml
+
+DEFAULT_UNIFIED_YAML = Path(__file__).resolve().parents[1] / "ml" / "configs" / "labels" / "unified_classes.yaml"
 
 
 def parse_label(class_name: str) -> Tuple[str, str, bool]:
     """
-    Parses a unified class identifier (e.g. 'Tomato___Late_blight') into:
-      crop: 'Tomato'
-      condition: 'Late blight'
-      healthy: False
+    Parses a unified dataset label into (crop, condition, is_healthy).
+
+    Examples:
+      'Tomato___Late_blight' -> ('Tomato', 'Late blight', False)
+      'Apple___healthy' -> ('Apple', 'Healthy', True)
+      'Corn_(maize)___Common_rust_' -> ('Corn (maize)', 'Common rust', False)
+      'Pepper,_bell___Bacterial_spot' -> ('Pepper, bell', 'Bacterial spot', False)
     """
     raw = str(class_name).strip()
     if "___" in raw:
-        crop_part, cond_part = raw.split("___", 1)
+        raw_crop, raw_cond = raw.split("___", 1)
     else:
-        crop_part = raw
-        cond_part = "unknown"
+        raw_crop, raw_cond = raw, ""
 
-    # 1. Clean crop name
-    crop = crop_part.replace("_", " ").strip()
-    # Normalize common patterns
-    if crop.lower().startswith("pepper, bell") or crop.lower().startswith("pepper,_bell"):
-        crop = "Bell pepper"
-    elif crop.lower().startswith("cherry (including sour)"):
-        crop = "Cherry (sour/sweet)"
-    elif crop.lower().startswith("corn (maize)"):
-        crop = "Corn (maize)"
+    # Clean crop name
+    crop = raw_crop.replace("_", " ").strip()
+    crop = crop.replace(" ,", ",")
+    while "  " in crop:
+        crop = crop.replace("  ", " ")
+    if crop and crop[0].islower():
+        crop = crop[0].upper() + crop[1:]
 
-    crop = crop[0].upper() + crop[1:] if len(crop) > 1 else crop.upper()
-
-    # 2. Clean condition name
-    cond = cond_part.replace("_", " ").strip()
+    # Clean condition name
+    cond = raw_cond.replace("_", " ").strip()
     while "  " in cond:
         cond = cond.replace("  ", " ")
 
-    is_healthy = cond.lower() == "healthy"
-    if is_healthy:
-        condition = "Healthy"
-    else:
-        condition = cond[0].upper() + cond[1:] if len(cond) > 1 else cond.upper()
+    is_healthy = (cond.lower() == "healthy")
 
-    return crop, condition, is_healthy
+    if is_healthy:
+        cond = "Healthy"
+    elif cond:
+        # Normalize leading lowercase if present
+        if cond[0].islower():
+            cond = cond[0].upper() + cond[1:]
+    else:
+        cond = "Unknown Condition"
+
+    return crop, cond, is_healthy
 
 
 def get_class_info(class_name: str) -> Dict[str, Any]:
@@ -54,3 +63,19 @@ def get_class_info(class_name: str) -> Dict[str, Any]:
         "condition": condition,
         "healthy": healthy,
     }
+
+
+def get_all_classes(yaml_path: Optional[Path] = None) -> List[Dict[str, Any]]:
+    """Loads all unified classes from yaml and parses their taxonomic metadata."""
+    target_yaml = yaml_path or DEFAULT_UNIFIED_YAML
+    if not target_yaml.exists():
+        return []
+
+    with open(target_yaml, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+
+    classes_list = data.get("classes", [])
+    results = []
+    for cls_name in classes_list:
+        results.append(get_class_info(cls_name))
+    return results
