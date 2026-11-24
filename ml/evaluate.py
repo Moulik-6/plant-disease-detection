@@ -363,8 +363,15 @@ def build_eval_transform(run_config: Dict[str, Any]) -> transforms.Compose:
     - img_size: 224 (default)
     - ImageNet normalization
     """
-    img_size = int(run_config.get("img_size") or run_config.get("dataset", {}).get("img_size", 224))
-    preprocess = str(run_config.get("preprocess", run_config.get("dataset", {}).get("preprocess", "squash"))).lower().strip()
+    img_size = run_config.get("img_size")
+    if img_size is None:
+        img_size = run_config.get("dataset", {}).get("img_size", 224)
+    img_size = int(img_size)
+
+    preprocess = run_config.get("preprocess")
+    if preprocess is None:
+        preprocess = run_config.get("dataset", {}).get("preprocess", "squash")
+    preprocess = str(preprocess).lower().strip()
 
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
@@ -894,7 +901,7 @@ Examples:
             "type": "run",
             "run_dir": run_dir,
             "checkpoint_path": best_pth,
-            "config_path": run_cfg_path if run_cfg_path.exists() else Path("ml/configs/config.yaml"),
+            "config_path": run_cfg_path if run_cfg_path.exists() else Path("ml/legacy/config.yaml"),
             "eval_dir": run_dir / "eval",
             "name": f"{run_dir.parent.name}/{run_dir.name}",
             "identifier": str(run_dir),
@@ -912,7 +919,7 @@ Examples:
             "type": "checkpoint",
             "run_dir": None,
             "checkpoint_path": ckpt,
-            "config_path": Path("ml/configs/config.yaml"),
+            "config_path": Path("ml/legacy/config.yaml"),
             "eval_dir": Path("runs") / baseline_name / "eval",
             "name": baseline_name,
             "identifier": baseline_name,
@@ -967,7 +974,7 @@ Examples:
                 run_cfg = yaml.safe_load(f) or {}
 
         logger.info("Loading model and checkpoint for '%s' from: %s", target_name, ckpt_path)
-        fallback_cfg = "ml/configs/config.yaml"
+        fallback_cfg = "ml/legacy/config.yaml"
 
         ckpt_raw = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
         target_arch = (

@@ -1,4 +1,5 @@
 import sys
+import argparse
 from pathlib import Path
 from PIL import Image, ImageOps, ImageDraw, ImageFont
 
@@ -44,7 +45,6 @@ models = [
 ]
 
 OUTPUT = BASE / "comparison"
-OUTPUT.mkdir(parents=True, exist_ok=True)
 
 try:
     font = ImageFont.truetype("DejaVuSans-Bold.ttf", 32)
@@ -71,50 +71,62 @@ def add_label(img, text):
     return canvas
 
 
-for key, info in images.items():
-    panels = []
-
-    original = Image.open(info["original"]).convert("RGB")
-
-    # Use the same dimensions for every panel.
-    width = 500
-    ratio = width / original.width
-    height = int(original.height * ratio)
-
-    original = original.resize((width, height), Image.Resampling.LANCZOS)
-
-    panels.append(add_label(original, "Original"))
-
-    for model_name, model_dir in models[1:]:
-        path = model_dir / f"{key}.jpg"
-
-        if not path.exists():
-            raise FileNotFoundError(f"Missing: {path}")
-
-        img = Image.open(path).convert("RGB")
-        img = img.resize((width, height), Image.Resampling.LANCZOS)
-
-        panels.append(add_label(img, model_name))
-
-    # Combine horizontally.
-    total_width = sum(img.width for img in panels)
-    total_height = max(img.height for img in panels)
-
-    comparison = Image.new(
-        "RGB",
-        (total_width, total_height),
-        "white",
-    )
-
-    x = 0
-    for panel in panels:
-        comparison.paste(panel, (x, 0))
-        x += panel.width
-
-    output = OUTPUT / f"{key}_comparison.jpg"
-    comparison.save(output, quality=95)
-
-    print(f"Saved: {output}")
+def parse_args():
+    parser = argparse.ArgumentParser(description="Create side-by-side Grad-CAM comparison figures")
+    return parser.parse_args()
 
 
-print("\nAll comparison images created successfully.")
+def main():
+    args = parse_args()
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+
+    for key, info in images.items():
+        panels = []
+
+        original = Image.open(info["original"]).convert("RGB")
+
+        # Use the same dimensions for every panel.
+        width = 500
+        ratio = width / original.width
+        height = int(original.height * ratio)
+
+        original = original.resize((width, height), Image.Resampling.LANCZOS)
+
+        panels.append(add_label(original, "Original"))
+
+        for model_name, model_dir in models[1:]:
+            path = model_dir / f"{key}.jpg"
+
+            if not path.exists():
+                raise FileNotFoundError(f"Missing: {path}")
+
+            img = Image.open(path).convert("RGB")
+            img = img.resize((width, height), Image.Resampling.LANCZOS)
+
+            panels.append(add_label(img, model_name))
+
+        # Combine horizontally.
+        total_width = sum(img.width for img in panels)
+        total_height = max(img.height for img in panels)
+
+        comparison = Image.new(
+            "RGB",
+            (total_width, total_height),
+            "white",
+        )
+
+        x = 0
+        for panel in panels:
+            comparison.paste(panel, (x, 0))
+            x += panel.width
+
+        output = OUTPUT / f"{key}_comparison.jpg"
+        comparison.save(output, quality=95)
+
+        print(f"Saved: {output}")
+
+    print("\nAll comparison images created successfully.")
+
+
+if __name__ == "__main__":
+    main()

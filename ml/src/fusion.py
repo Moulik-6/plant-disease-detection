@@ -242,7 +242,9 @@ class FusionModel(nn.Module):
                 logger.warning("EfficientNet init checkpoint not found: %s", path_eff)
             else:
                 ckpt = torch.load(path_eff, map_location="cpu", weights_only=False)
-                sd = ckpt.get("model_state", ckpt.get("state_dict", ckpt))
+                sd = ckpt.get("model_state")
+                if sd is None:
+                    sd = ckpt.get("state_dict", ckpt)
 
                 target_sd = self.efficientnet.state_dict()
                 matching_sd = {}
@@ -273,7 +275,9 @@ class FusionModel(nn.Module):
                 logger.warning("ViT init checkpoint not found: %s", path_vit)
             else:
                 ckpt = torch.load(path_vit, map_location="cpu", weights_only=False)
-                sd = ckpt.get("model_state", ckpt.get("state_dict", ckpt))
+                sd = ckpt.get("model_state")
+                if sd is None:
+                    sd = ckpt.get("state_dict", ckpt)
 
                 target_sd = self.vit.state_dict()
                 matching_sd = {}

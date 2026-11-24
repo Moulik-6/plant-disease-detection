@@ -1,6 +1,7 @@
 import os
 import sys
 import csv
+import argparse
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -17,7 +18,6 @@ from ml.analysis.gradcam import (
     preprocess_image,
     run_gradcam_on_image
 )
-from pytorch_grad_cam import GradCAM
 
 # ---------------------------------------------------------------------------
 # Setup definitions
@@ -117,7 +117,13 @@ def create_panel_image(orig_path, resnet_path, eff_path, vit_path, output_path, 
     comp_img.save(output_path, quality=95)
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run Grad-CAM comparison experiment across models")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[*] Executing Grad-CAM experiment on device: {device}\n")
 
@@ -149,6 +155,7 @@ def main():
 
         target_layers, reshape_transform = get_target_layers_and_transform(model, arch)
 
+        from pytorch_grad_cam import GradCAM
         cam = GradCAM(
             model=model,
             target_layers=target_layers,

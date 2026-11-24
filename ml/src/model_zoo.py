@@ -106,7 +106,11 @@ def load_checkpoint_model(
     num_classes = len(class_to_idx)
     model = build_any_model(ckpt_cfg, num_classes=num_classes, pretrained=False)
 
-    sd = ckpt.get("model_state", ckpt.get("state_dict", ckpt))
+    sd = ckpt.get("model_state")
+    if sd is None:
+        sd = ckpt.get("state_dict")
+    if sd is None:
+        sd = ckpt
     model.load_state_dict(sd)
     model.to(device)
     model.eval()

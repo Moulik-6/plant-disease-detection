@@ -38,7 +38,9 @@ def main():
     print(f"[*] Loading checkpoint from {args.checkpoint}...")
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     
-    config = checkpoint.get("config", load_config(args.config))
+    config = checkpoint.get("config")
+    if config is None:
+        config = load_config(args.config)
     class_to_idx = checkpoint.get("class_to_idx")
     
     # Load test split

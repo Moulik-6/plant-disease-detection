@@ -3,7 +3,7 @@ import os
 import sys
 import random
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import Any, List, Tuple, Optional
 
 import numpy as np
 from PIL import Image
@@ -15,10 +15,6 @@ import torch.nn.functional as F
 _repo_root = str(Path(__file__).resolve().parents[2])
 if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
-
-from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 from ml.src.dataset import get_dataloaders, get_transforms
 from ml.src.models import build_model
@@ -98,7 +94,9 @@ def load_model_and_classes(config_path: str, checkpoint_path: str, device: torch
         raise FileNotFoundError(f"Checkpoint file '{checkpoint_path}' not found.")
 
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
-    config = checkpoint.get("config", load_config(config_path))
+    config = checkpoint.get("config")
+    if config is None:
+        config = load_config(config_path)
     class_to_idx = checkpoint.get("class_to_idx")
 
     if class_to_idx is None:
@@ -146,7 +144,7 @@ def preprocess_image(image_path: str, img_size: int = 224) -> Tuple[torch.Tensor
 
 def run_gradcam_on_image(
     model: torch.nn.Module,
-    cam: GradCAM,
+    cam: Any,
     image_path: str,
     output_path: str,
     idx_to_class: dict,
@@ -159,6 +157,9 @@ def run_gradcam_on_image(
     Runs inference, generates Grad-CAM heatmap, overlays it on the image,
     saves the visualization, and returns (pred_class_name, confidence, pred_idx).
     """
+    from pytorch_grad_cam.utils.image import show_cam_on_image
+    from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+
     input_tensor, rgb_img = preprocess_image(image_path, img_size=img_size)
     input_tensor = input_tensor.to(device)
 
@@ -214,6 +215,7 @@ def main():
     target_layers, reshape_transform = get_target_layers_and_transform(model, architecture)
     print(f"[*] Grad-CAM target layers: {target_layers}")
 
+    from pytorch_grad_cam import GradCAM
     cam = GradCAM(
         model=model,
         target_layers=target_layers,
