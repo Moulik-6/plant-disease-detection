@@ -143,3 +143,44 @@ To isolate the factors contributing to real-world generalization and model calib
    - Configured via `dataset.exclude_sources: [plantwild]` or `dataset.exclude_sources: [plantdoc]`. By training on mixed data without source $S$ while leaving evaluation on source $S$ intact in `field_test`, the evaluator's `doc top-1` and `wild top-1` metrics directly measure true cross-collection generalization without intra-collection leakage.
 4. **Multi-Backbone Late Fusion (D)**:
    - Compares static concatenation against learned dynamic gating $g \cdot a + (1-g) \cdot b$. Measures whether combining convolutional feature extractors with transformer self-attention resolves ambiguous field symptoms better than scaling an individual backbone family.
+
+---
+
+## 7. Calibration and Unknown Handling
+
+In clinical and agricultural field deployment, deep neural networks must produce reliable probability estimates and abstain on unmapped, out-of-domain, or novel pathological conditions. The calibration and selective prediction framework in [ml/analysis/calibrate.py](file:///c:/Major%20Project/plant-disease-detection/ml/analysis/calibrate.py) establishes trustworthy decision-making through post-hoc calibration, deterministic open-set partitioning, validation-constrained threshold selection, and risk-coverage analysis.
+
+### 1. Temperature Scaling
+To correct overconfidence without altering classification accuracy or parameter weights, a single scalar temperature $T > 0$ is fitted strictly on `field_val`:
+- Probabilities $p \in [0, 1]^C$ are mapped to logits $z = \log(p + \epsilon)$.
+- Scaled logits $z / T$ generate calibrated probabilities $\hat{p} = \text{softmax}(z / T)$.
+- $T$ is optimized by minimizing Negative Log-Likelihood (NLL) with L-BFGS in log-space ($s = \log T, T = \exp(s)$):
+  $$\text{NLL}(T) = -\frac{1}{N_{\text{val}}} \sum_{i=1}^{N_{\text{val}}} \log \hat{p}_{i, y_i}(T)$$
+- Evaluated before and after calibration using NLL and Expected Calibration Error (ECE, 15 bins) across both `field_val` and `field_test`. Because temperature scaling is monotonic, Top-1 accuracy is strictly preserved while ECE and probability reliability are significantly improved.
+
+### 2. Group-Aware Open-Set Partitioning (`other_pool`)
+Unmapped plant species, unknown weeds, and non-target leaf imagery in `other_pool` serve as out-of-domain open-set samples. To prevent perceptual cluster contamination:
+- Samples are deterministically split 50/50 by `group_id` into `unknown_val` and `unknown_test` using random seed 42.
+- A perceptual hash cluster (`group_id`) is strictly confined to either `unknown_val` or `unknown_test`, guaranteeing zero intra-cluster data leakage between validation and evaluation.
+
+### 3. Validation-Constrained Selective Thresholds
+The maximum calibrated softmax probability serves as the model's confidence score:
+$$c_i = \max_{j=1}^C \hat{p}_{i, j}$$
+To prevent optimistic bias, rejection thresholds are computed **strictly on validation partitions** (`field_val` and `unknown_val`) across three operational deployment points:
+1. **Operating Point (a) — Maximum Youden's $J$**:
+   - Maximizes $J(\tau) = \text{TPR}(\tau) + \text{TNR}(\tau) - 1$, where $\text{TPR}$ is the coverage on known `field_val` and $\text{TNR}$ is the rejection rate on `unknown_val`. Establishes the optimal trade-off between known retention and open-set rejection.
+2. **Operating Point (b) — High Known Coverage ($\ge 90\%$)**:
+   - The highest threshold $\tau_b$ maintaining at least $90\%$ coverage on `field_val`: $\tau_b = \sup \{ \tau : \text{coverage}(\tau, \text{field\_val}) \ge 0.90 \}$.
+3. **Operating Point (c) — High Precision at Maximum Coverage ($\ge 90\%$ Acc)**:
+   - The threshold $\tau_c$ at which empirical accuracy among accepted `field_val` samples reaches at least $90\%$ while maximizing image coverage.
+
+### 4. Held-Out Evaluation & Risk-Coverage Curves
+All chosen thresholds are evaluated strictly on held-out `field_test` (known test) and `unknown_test` (open-set test):
+- **Known Test Coverage**: Fraction of real field test samples retained ($c_i \ge \tau$).
+- **Accepted Accuracy**: Top-1 classification accuracy evaluated exclusively on retained field test images.
+- **Unknown Rejection Rate**: Fraction of open-set anomaly images safely rejected ($c_j < \tau$).
+- **Known vs. Unknown AUROC**: Area Under the ROC Curve discriminating known field test from open-set test imagery via confidence score.
+- **Risk-Coverage Curve**:
+  - Evaluates selective risk (error rate among accepted images, $\text{Risk} = 1 - \text{Accuracy}$) from $100\%$ down to $20\%$ coverage in steps of $10\%$.
+  - Equipped with two-sided 95% confidence intervals derived from 1,000 cluster bootstrap resamples by `group_id` on `field_test` (seed 42).
+- **Artifacts**: Summary metrics saved to `results/calibration/<name>.json`, alongside publication-quality Reliability Diagrams and Risk-Coverage curve plots.
