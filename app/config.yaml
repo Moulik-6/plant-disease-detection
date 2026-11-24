@@ -1,0 +1,34 @@
+# Plant Disease Detection Web API & Inference Configuration
+
+# Model checkpoints (comma-separated or list). Overridden by env var APP_CHECKPOINTS.
+checkpoints:
+  - "ml/checkpoints/resnet50/best_model.pth"
+
+# Path to calibration JSON from ml/analysis/calibrate.py. Overridden by env var APP_CALIBRATION.
+calibration_path: null
+
+# SQLite database file. Overridden by env var APP_DB.
+db_path: "app.db"
+
+# PyTorch device: auto | cpu | cuda. Overridden by env var APP_DEVICE.
+device: "auto"
+
+# Store uploaded raw images to disk (0 = disabled, 1 = enabled). Overridden by env var APP_STORE_IMAGES.
+store_images: 0
+
+# Upload directory when store_images is 1
+upload_dir: "app/uploads"
+
+# Security constraints
+max_upload_bytes: 5242880 # 5 MB (5 * 1024 * 1024)
+max_image_pixels: 25000000 # 25 Megapixels (5000 x 5000)
+
+# Default temperature and confidence thresholds if calibration JSON is not provided
+default_temperature: 1.0
+default_threshold: 0.5
+
+# CORS Origins (empty list = disabled). Overridden by env var APP_CORS_ORIGINS.
+cors_origins: []
+
+# User safety & expert disclaimer
+caution_text: "This diagnosis is a preliminary screening aid and not a certified expert diagnosis. For severe crop symptoms, consult a certified local agricultural extension officer or agronomist."
