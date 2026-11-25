@@ -66,3 +66,12 @@ Thumbs.db
 *.pem
 kaggle.json
 ml/auth_colab.py
+
+# Stage-2 results: keep numbers, plots and summaries; keep dataset images out of Git
+!results/stage2/
+!results/stage2/**/
+!results/stage2/**/*.json
+!results/stage2/**/*.csv
+!results/stage2/**/*.md
+!results/stage2/calibration/*.png
+results/stage2/error_analysis/**/*.png

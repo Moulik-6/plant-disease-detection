@@ -1,0 +1,217 @@
+{
+  "name": "b_ensemble",
+  "eval_dirs": [
+    "/home/ubuntu/plant-disease-detection/runs/b_mixed_resnet50/20261121_131527/eval",
+    "/home/ubuntu/plant-disease-detection/runs/b_mixed_efficientnet_v2_s/20261121_122244/eval",
+    "/home/ubuntu/plant-disease-detection/runs/b_mixed_vit_b_16/20261121_134843/eval"
+  ],
+  "temperature": 0.9077910747054088,
+  "calibration": {
+    "temperature": 0.9077910747054088,
+    "field_val": {
+      "n_samples": 1477,
+      "nll_before": 0.9823592901229858,
+      "nll_after": 0.9708766937255859,
+      "ece_before": 0.035914865014072025,
+      "ece_after": 0.0377189583607275,
+      "accuracy": 0.7257955314827352
+    },
+    "field_test": {
+      "n_samples": 1574,
+      "nll_before": 0.8889688849449158,
+      "nll_after": 0.8698707222938538,
+      "ece_before": 0.04873780557812395,
+      "ece_after": 0.026893779635429375,
+      "accuracy": 0.7560355781448539
+    }
+  },
+  "operating_points": {
+    "youden_j": {
+      "name": "Maximum Youden J (Known vs Unknown)",
+      "threshold": 0.6781963109970093,
+      "val_metric_name": "Youden J",
+      "val_metric_val": 0.3952735136789336,
+      "val_known_coverage": 0.6953283683141503,
+      "val_unknown_rejection": 0.6999451453647834,
+      "test_known_coverage": 0.6918678526048284,
+      "test_accepted_accuracy": 0.8760330578512396,
+      "test_unknown_rejection": 0.7067805853481185,
+      "test_accepted_samples": 1089
+    },
+    "keep_90_known": {
+      "name": "Keep >= 90% Known Images",
+      "threshold": 0.4289683401584625,
+      "val_metric_name": "Coverage",
+      "val_metric_val": 0.9004739336492891,
+      "val_known_coverage": 0.9004739336492891,
+      "val_accepted_accuracy": 0.7706766917293233,
+      "test_known_coverage": 0.9066073697585769,
+      "test_accepted_accuracy": 0.8044849334267694,
+      "test_unknown_rejection": 0.3593892019632794,
+      "test_accepted_samples": 1427
+    },
+    "acc_90_max_cov": {
+      "name": "Reach >= 90% Accuracy at Max Coverage",
+      "threshold": 0.8248436450958252,
+      "val_metric_name": "Accuracy",
+      "val_metric_val": 0.9006535947712418,
+      "val_known_coverage": 0.5179417738659445,
+      "val_accepted_accuracy": 0.9006535947712418,
+      "test_known_coverage": 0.5324015247776366,
+      "test_accepted_accuracy": 0.9152744630071599,
+      "test_unknown_rejection": 0.8373023086711507,
+      "test_accepted_samples": 838
+    }
+  },
+  "auroc_known_vs_unknown": 0.7620269804242592,
+  "other_pool_split": {
+    "unknown_val_samples": 5469,
+    "unknown_test_samples": 5501
+  },
+  "risk_coverage_curve": [
+    {
+      "target_coverage": 1.0,
+      "actual_coverage": 1.0,
+      "threshold": 0.16679923236370087,
+      "accepted_samples": 1574,
+      "accuracy": 0.7560355781448539,
+      "accuracy_ci_95": [
+        0.7319391634980988,
+        0.7798545997777113
+      ],
+      "risk": 0.2439644218551461,
+      "risk_ci_95": [
+        0.2201454002222887,
+        0.26806083650190116
+      ]
+    },
+    {
+      "target_coverage": 0.9,
+      "actual_coverage": 0.8996188055908514,
+      "threshold": 0.4359879791736603,
+      "accepted_samples": 1416,
+      "accuracy": 0.807909604519774,
+      "accuracy_ci_95": [
+        0.7851986095407149,
+        0.8306957599360406
+      ],
+      "risk": 0.192090395480226,
+      "risk_ci_95": [
+        0.16930424006395944,
+        0.21480139045928515
+      ]
+    },
+    {
+      "target_coverage": 0.8,
+      "actual_coverage": 0.7998729351969505,
+      "threshold": 0.5490750074386597,
+      "accepted_samples": 1259,
+      "accuracy": 0.840349483717236,
+      "accuracy_ci_95": [
+        0.8165490231937118,
+        0.8630789473684211
+      ],
+      "risk": 0.15965051628276405,
+      "risk_ci_95": [
+        0.13692105263157894,
+        0.1834509768062882
+      ]
+    },
+    {
+      "target_coverage": 0.7,
+      "actual_coverage": 0.7001270648030495,
+      "threshold": 0.6730801463127136,
+      "accepted_samples": 1102,
+      "accuracy": 0.8747731397459165,
+      "accuracy_ci_95": [
+        0.849462120320226,
+        0.8960881232189345
+      ],
+      "risk": 0.12522686025408347,
+      "risk_ci_95": [
+        0.1039118767810655,
+        0.15053787967977394
+      ]
+    },
+    {
+      "target_coverage": 0.6,
+      "actual_coverage": 0.5997458703939009,
+      "threshold": 0.7672333121299744,
+      "accepted_samples": 944,
+      "accuracy": 0.9057203389830508,
+      "accuracy_ci_95": [
+        0.8831131512165995,
+        0.9259317862165963
+      ],
+      "risk": 0.09427966101694918,
+      "risk_ci_95": [
+        0.07406821378340366,
+        0.11688684878340054
+      ]
+    },
+    {
+      "target_coverage": 0.5,
+      "actual_coverage": 0.5,
+      "threshold": 0.8488173484802246,
+      "accepted_samples": 787,
+      "accuracy": 0.9263024142312579,
+      "accuracy_ci_95": [
+        0.9030141929685094,
+        0.9453859927925187
+      ],
+      "risk": 0.07369758576874208,
+      "risk_ci_95": [
+        0.05461400720748136,
+        0.09698580703149058
+      ]
+    },
+    {
+      "target_coverage": 0.4,
+      "actual_coverage": 0.40025412960609913,
+      "threshold": 0.9026203751564026,
+      "accepted_samples": 630,
+      "accuracy": 0.9428571428571428,
+      "accuracy_ci_95": [
+        0.9210465021248774,
+        0.9615399385560676
+      ],
+      "risk": 0.05714285714285716,
+      "risk_ci_95": [
+        0.03846006144393239,
+        0.07895349787512261
+      ]
+    },
+    {
+      "target_coverage": 0.3,
+      "actual_coverage": 0.29987293519695046,
+      "threshold": 0.9288758635520935,
+      "accepted_samples": 472,
+      "accuracy": 0.9576271186440678,
+      "accuracy_ci_95": [
+        0.9352037150835464,
+        0.977643257153719
+      ],
+      "risk": 0.0423728813559322,
+      "risk_ci_95": [
+        0.022356742846280947,
+        0.06479628491645359
+      ]
+    },
+    {
+      "target_coverage": 0.2,
+      "actual_coverage": 0.20012706480304956,
+      "threshold": 0.9418342709541321,
+      "accepted_samples": 315,
+      "accuracy": 0.9777777777777777,
+      "accuracy_ci_95": [
+        0.9580645161290322,
+        0.9938489425981872
+      ],
+      "risk": 0.022222222222222254,
+      "risk_ci_95": [
+        0.0061510574018127095,
+        0.041935483870967794
+      ]
+    }
+  ]
+}

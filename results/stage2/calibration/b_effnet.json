@@ -1,0 +1,215 @@
+{
+  "name": "b_effnet",
+  "eval_dirs": [
+    "/home/ubuntu/plant-disease-detection/runs/b_mixed_efficientnet_v2_s/20261121_122244/eval"
+  ],
+  "temperature": 1.067524409646193,
+  "calibration": {
+    "temperature": 1.067524409646193,
+    "field_val": {
+      "n_samples": 1477,
+      "nll_before": 1.2099672555923462,
+      "nll_after": 1.2028722763061523,
+      "ece_before": 0.09233233740221591,
+      "ece_after": 0.04890305491904593,
+      "accuracy": 0.7115775220040623
+    },
+    "field_test": {
+      "n_samples": 1574,
+      "nll_before": 1.1309831142425537,
+      "nll_after": 1.1282418966293335,
+      "ece_before": 0.07333121589814542,
+      "ece_after": 0.038881356646857095,
+      "accuracy": 0.729987293519695
+    }
+  },
+  "operating_points": {
+    "youden_j": {
+      "name": "Maximum Youden J (Known vs Unknown)",
+      "threshold": 0.8042363524436951,
+      "val_metric_name": "Youden J",
+      "val_metric_val": 0.27733914289849126,
+      "val_known_coverage": 0.6018957345971564,
+      "val_unknown_rejection": 0.6754434083013348,
+      "test_known_coverage": 0.6232528589580686,
+      "test_accepted_accuracy": 0.854230377166157,
+      "test_unknown_rejection": 0.6693328485729867,
+      "test_accepted_samples": 981
+    },
+    "keep_90_known": {
+      "name": "Keep >= 90% Known Images",
+      "threshold": 0.5024125576019287,
+      "val_metric_name": "Coverage",
+      "val_metric_val": 0.9004739336492891,
+      "val_known_coverage": 0.9004739336492891,
+      "val_accepted_accuracy": 0.7443609022556391,
+      "test_known_coverage": 0.9015247776365947,
+      "test_accepted_accuracy": 0.7744890768146582,
+      "test_unknown_rejection": 0.2841301581530631,
+      "test_accepted_samples": 1419
+    },
+    "acc_90_max_cov": {
+      "name": "Reach >= 90% Accuracy at Max Coverage",
+      "threshold": 0.928851842880249,
+      "val_metric_name": "Accuracy",
+      "val_metric_val": 1.0,
+      "val_known_coverage": 0.0006770480704129993,
+      "val_accepted_accuracy": 1.0,
+      "test_known_coverage": 0.0025412960609911056,
+      "test_accepted_accuracy": 0.75,
+      "test_unknown_rejection": 0.9983639338302127,
+      "test_accepted_samples": 4
+    }
+  },
+  "auroc_known_vs_unknown": 0.6867934027011838,
+  "other_pool_split": {
+    "unknown_val_samples": 5469,
+    "unknown_test_samples": 5501
+  },
+  "risk_coverage_curve": [
+    {
+      "target_coverage": 1.0,
+      "actual_coverage": 1.0,
+      "threshold": 0.19313806295394897,
+      "accepted_samples": 1574,
+      "accuracy": 0.729987293519695,
+      "accuracy_ci_95": [
+        0.7069174245223423,
+        0.7539735526655394
+      ],
+      "risk": 0.27001270648030495,
+      "risk_ci_95": [
+        0.24602644733446058,
+        0.2930825754776577
+      ]
+    },
+    {
+      "target_coverage": 0.9,
+      "actual_coverage": 0.8996188055908514,
+      "threshold": 0.5068275928497314,
+      "accepted_samples": 1416,
+      "accuracy": 0.7747175141242938,
+      "accuracy_ci_95": [
+        0.7512001881142506,
+        0.7979040404040404
+      ],
+      "risk": 0.2252824858757062,
+      "risk_ci_95": [
+        0.20209595959595963,
+        0.24879981188574937
+      ]
+    },
+    {
+      "target_coverage": 0.8,
+      "actual_coverage": 0.7998729351969505,
+      "threshold": 0.6430949568748474,
+      "accepted_samples": 1259,
+      "accuracy": 0.8109610802223988,
+      "accuracy_ci_95": [
+        0.7859925504925432,
+        0.8347896898119651
+      ],
+      "risk": 0.18903891977760123,
+      "risk_ci_95": [
+        0.16521031018803484,
+        0.21400744950745676
+      ]
+    },
+    {
+      "target_coverage": 0.7,
+      "actual_coverage": 0.7001270648030495,
+      "threshold": 0.7627957463264465,
+      "accepted_samples": 1102,
+      "accuracy": 0.8411978221415608,
+      "accuracy_ci_95": [
+        0.8152451597815696,
+        0.8641253678666116
+      ],
+      "risk": 0.1588021778584392,
+      "risk_ci_95": [
+        0.13587463213338835,
+        0.18475484021843033
+      ]
+    },
+    {
+      "target_coverage": 0.6,
+      "actual_coverage": 0.5997458703939009,
+      "threshold": 0.8130812644958496,
+      "accepted_samples": 944,
+      "accuracy": 0.8591101694915254,
+      "accuracy_ci_95": [
+        0.832266905720143,
+        0.8819258902017523
+      ],
+      "risk": 0.1408898305084746,
+      "risk_ci_95": [
+        0.11807410979824771,
+        0.16773309427985708
+      ]
+    },
+    {
+      "target_coverage": 0.5,
+      "actual_coverage": 0.5,
+      "threshold": 0.8325650691986084,
+      "accepted_samples": 787,
+      "accuracy": 0.8792884371029225,
+      "accuracy_ci_95": [
+        0.8496158979825041,
+        0.9032683164895108
+      ],
+      "risk": 0.12071156289707752,
+      "risk_ci_95": [
+        0.09673168351048919,
+        0.15038410201749583
+      ]
+    },
+    {
+      "target_coverage": 0.4,
+      "actual_coverage": 0.40025412960609913,
+      "threshold": 0.8465907573699951,
+      "accepted_samples": 630,
+      "accuracy": 0.8746031746031746,
+      "accuracy_ci_95": [
+        0.8396825396825397,
+        0.903021887705438
+      ],
+      "risk": 0.1253968253968254,
+      "risk_ci_95": [
+        0.09697811229456196,
+        0.1603174603174603
+      ]
+    },
+    {
+      "target_coverage": 0.3,
+      "actual_coverage": 0.29987293519695046,
+      "threshold": 0.8565918207168579,
+      "accepted_samples": 472,
+      "accuracy": 0.8728813559322034,
+      "accuracy_ci_95": [
+        0.8336841011051538,
+        0.9053555343612568
+      ],
+      "risk": 0.1271186440677966,
+      "risk_ci_95": [
+        0.0946444656387432,
+        0.16631589889484624
+      ]
+    },
+    {
+      "target_coverage": 0.2,
+      "actual_coverage": 0.20012706480304956,
+      "threshold": 0.8656864166259766,
+      "accepted_samples": 315,
+      "accuracy": 0.8507936507936508,
+      "accuracy_ci_95": [
+        0.8018555242090608,
+        0.8961048595321592
+      ],
+      "risk": 0.14920634920634923,
+      "risk_ci_95": [
+        0.1038951404678408,
+        0.1981444757909392
+      ]
+    }
+  ]
+}

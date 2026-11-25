@@ -1,0 +1,729 @@
+{
+  "set": "field_test",
+  "n_boot": 5000,
+  "seed": 42,
+  "comparisons": [
+    {
+      "model_a": "summary_b_mixed",
+      "model_b": "b_mixed_efficientnet_v2_s",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/summary_b_mixed/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_efficientnet_v2_s/20261121_122244/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.7560355781448539,
+        "model_b": 0.729987293519695,
+        "diff": -0.026048284625158846,
+        "ci_lower": -0.04023406348079131,
+        "ci_upper": -0.01215591573356373,
+        "ci_95": [
+          -0.04023406348079131,
+          -0.01215591573356373
+        ],
+        "p_positive": 0.0004
+      },
+      "macro_f1": {
+        "model_a": 0.7514431544541456,
+        "model_b": 0.7267346288579098,
+        "diff": -0.02470852559623571,
+        "ci_lower": -0.039720097539213475,
+        "ci_upper": -0.010712364620051708,
+        "ci_95": [
+          -0.039720097539213475,
+          -0.010712364620051708
+        ],
+        "p_positive": 0.0006
+      },
+      "discordant": {
+        "a_right_b_wrong": 79,
+        "b_right_a_wrong": 38,
+        "both_right": 1111,
+        "both_wrong": 346
+      }
+    },
+    {
+      "model_a": "b_mixed_efficientnet_v2_s",
+      "model_b": "c_finetune_efficientnet_v2_s",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_efficientnet_v2_s/20261121_122244/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/c_finetune_efficientnet_v2_s/20261121_192229/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.729987293519695,
+        "model_b": 0.6937738246505718,
+        "diff": -0.036213468869123244,
+        "ci_lower": -0.05969238673249478,
+        "ci_upper": -0.013418316134797352,
+        "ci_95": [
+          -0.05969238673249478,
+          -0.013418316134797352
+        ],
+        "p_positive": 0.0012
+      },
+      "macro_f1": {
+        "model_a": 0.7267346288579098,
+        "model_b": 0.6859071767700227,
+        "diff": -0.040827452087887184,
+        "ci_lower": -0.0653625633526138,
+        "ci_upper": -0.017139618760951072,
+        "ci_95": [
+          -0.0653625633526138,
+          -0.017139618760951072
+        ],
+        "p_positive": 0.0006
+      },
+      "discordant": {
+        "a_right_b_wrong": 173,
+        "b_right_a_wrong": 116,
+        "both_right": 976,
+        "both_wrong": 309
+      }
+    },
+    {
+      "model_a": "b_mixed_resnet50",
+      "model_b": "c_finetune_resnet50",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_resnet50/20261121_131527/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/c_finetune_resnet50/20261121_195412/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.7185514612452351,
+        "model_b": 0.6956797966963151,
+        "diff": -0.02287166454891998,
+        "ci_lower": -0.04235279409176009,
+        "ci_upper": -0.003794946544224022,
+        "ci_95": [
+          -0.04235279409176009,
+          -0.003794946544224022
+        ],
+        "p_positive": 0.0096
+      },
+      "macro_f1": {
+        "model_a": 0.7192488751992523,
+        "model_b": 0.6910774111206568,
+        "diff": -0.0281714640785955,
+        "ci_lower": -0.050010795822532525,
+        "ci_upper": -0.007214951796217747,
+        "ci_95": [
+          -0.050010795822532525,
+          -0.007214951796217747
+        ],
+        "p_positive": 0.0042
+      },
+      "discordant": {
+        "a_right_b_wrong": 139,
+        "b_right_a_wrong": 103,
+        "both_right": 992,
+        "both_wrong": 340
+      }
+    },
+    {
+      "model_a": "b_mixed_vit_b_16",
+      "model_b": "c_finetune_vit_b_16",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_vit_b_16/20261121_134843/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/c_finetune_vit_b_16/20261121_201424/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.7096569250317663,
+        "model_b": 0.7020330368487929,
+        "diff": -0.007623888182973326,
+        "ci_lower": -0.02725532753645134,
+        "ci_upper": 0.011487284671264964,
+        "ci_95": [
+          -0.02725532753645134,
+          0.011487284671264964
+        ],
+        "p_positive": 0.2076
+      },
+      "macro_f1": {
+        "model_a": 0.7009097933080243,
+        "model_b": 0.6993575611500695,
+        "diff": -0.0015522321579547471,
+        "ci_lower": -0.022473112173676413,
+        "ci_upper": 0.019187251943977208,
+        "ci_95": [
+          -0.022473112173676413,
+          0.019187251943977208
+        ],
+        "p_positive": 0.4444
+      },
+      "discordant": {
+        "a_right_b_wrong": 117,
+        "b_right_a_wrong": 105,
+        "both_right": 1000,
+        "both_wrong": 352
+      }
+    },
+    {
+      "model_a": "a_pv_only_resnet50",
+      "model_b": "a_field_aug_resnet50",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/a_pv_only_resnet50/20261121_155207/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/a_field_aug_resnet50/20261124_104807/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.1670902160101652,
+        "model_b": 0.1905972045743329,
+        "diff": 0.02350698856416772,
+        "ci_lower": 0.005736046327532248,
+        "ci_upper": 0.04042322485773953,
+        "ci_95": [
+          0.005736046327532248,
+          0.04042322485773953
+        ],
+        "p_positive": 0.995
+      },
+      "macro_f1": {
+        "model_a": 0.16482206612734415,
+        "model_b": 0.17687379516105997,
+        "diff": 0.012051729033715819,
+        "ci_lower": -0.007345242199154998,
+        "ci_upper": 0.03155522690610391,
+        "ci_95": [
+          -0.007345242199154998,
+          0.03155522690610391
+        ],
+        "p_positive": 0.8826
+      },
+      "discordant": {
+        "a_right_b_wrong": 75,
+        "b_right_a_wrong": 112,
+        "both_right": 188,
+        "both_wrong": 1199
+      }
+    },
+    {
+      "model_a": "a_field_aug_resnet50",
+      "model_b": "b_mixed_resnet50",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/a_field_aug_resnet50/20261124_104807/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_resnet50/20261121_131527/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.1905972045743329,
+        "model_b": 0.7185514612452351,
+        "diff": 0.5279542566709021,
+        "ci_lower": 0.4968352422412131,
+        "ci_upper": 0.5581568586577129,
+        "ci_95": [
+          0.4968352422412131,
+          0.5581568586577129
+        ],
+        "p_positive": 1.0
+      },
+      "macro_f1": {
+        "model_a": 0.17687379516105997,
+        "model_b": 0.7192488751992523,
+        "diff": 0.5423750800381923,
+        "ci_lower": 0.5127453399249081,
+        "ci_upper": 0.5715623468647457,
+        "ci_95": [
+          0.5127453399249081,
+          0.5715623468647457
+        ],
+        "p_positive": 1.0
+      },
+      "discordant": {
+        "a_right_b_wrong": 55,
+        "b_right_a_wrong": 886,
+        "both_right": 245,
+        "both_wrong": 388
+      }
+    },
+    {
+      "model_a": "summary_b_eff_vit",
+      "model_b": "d_fusion_concat_fusion_concat",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/summary_b_eff_vit/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/d_fusion_concat_fusion_concat/20261124_132427/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.7477763659466328,
+        "model_b": 0.7426937738246506,
+        "diff": -0.0050825921219821435,
+        "ci_lower": -0.017252396166134276,
+        "ci_upper": 0.006858930934896108,
+        "ci_95": [
+          -0.017252396166134276,
+          0.006858930934896108
+        ],
+        "p_positive": 0.1936
+      },
+      "macro_f1": {
+        "model_a": 0.7422416915263166,
+        "model_b": 0.741444418290009,
+        "diff": -0.0007972732363076274,
+        "ci_lower": -0.013813472138971005,
+        "ci_upper": 0.012015557153300608,
+        "ci_95": [
+          -0.013813472138971005,
+          0.012015557153300608
+        ],
+        "p_positive": 0.447
+      },
+      "discordant": {
+        "a_right_b_wrong": 45,
+        "b_right_a_wrong": 37,
+        "both_right": 1132,
+        "both_wrong": 360
+      }
+    },
+    {
+      "model_a": "summary_b_eff_vit",
+      "model_b": "d_fusion_gated_fusion_gated",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/summary_b_eff_vit/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/d_fusion_gated_fusion_gated/20261124_134947/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.7477763659466328,
+        "model_b": 0.7312579415501906,
+        "diff": -0.016518424396442133,
+        "ci_lower": -0.03011378863811768,
+        "ci_upper": -0.0032010243277849045,
+        "ci_95": [
+          -0.03011378863811768,
+          -0.0032010243277849045
+        ],
+        "p_positive": 0.0034
+      },
+      "macro_f1": {
+        "model_a": 0.7422416915263166,
+        "model_b": 0.7287257901090849,
+        "diff": -0.01351590141723169,
+        "ci_lower": -0.0274102674861706,
+        "ci_upper": -0.0005725059593723478,
+        "ci_95": [
+          -0.0274102674861706,
+          -0.0005725059593723478
+        ],
+        "p_positive": 0.0206
+      },
+      "discordant": {
+        "a_right_b_wrong": 63,
+        "b_right_a_wrong": 37,
+        "both_right": 1114,
+        "both_wrong": 360
+      }
+    },
+    {
+      "model_a": "b_mixed_efficientnet_v2_s",
+      "model_b": "d_fusion_concat_fusion_concat",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_efficientnet_v2_s/20261121_122244/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/d_fusion_concat_fusion_concat/20261124_132427/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.729987293519695,
+        "model_b": 0.7426937738246506,
+        "diff": 0.01270648030495558,
+        "ci_lower": 0.0038510293866991312,
+        "ci_upper": 0.021725239616613434,
+        "ci_95": [
+          0.0038510293866991312,
+          0.021725239616613434
+        ],
+        "p_positive": 0.9964
+      },
+      "macro_f1": {
+        "model_a": 0.7267346288579098,
+        "model_b": 0.741444418290009,
+        "diff": 0.014709789432099107,
+        "ci_lower": 0.005874298045182788,
+        "ci_upper": 0.024250531032414705,
+        "ci_95": [
+          0.005874298045182788,
+          0.024250531032414705
+        ],
+        "p_positive": 1.0
+      },
+      "discordant": {
+        "a_right_b_wrong": 13,
+        "b_right_a_wrong": 33,
+        "both_right": 1136,
+        "both_wrong": 392
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "model_a": "summary_b_mixed",
+      "model_b": "b_mixed_efficientnet_v2_s",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/summary_b_mixed/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_efficientnet_v2_s/20261121_122244/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.7560355781448539,
+        "model_b": 0.729987293519695,
+        "diff": -0.026048284625158846,
+        "ci_lower": -0.04023406348079131,
+        "ci_upper": -0.01215591573356373,
+        "ci_95": [
+          -0.04023406348079131,
+          -0.01215591573356373
+        ],
+        "p_positive": 0.0004
+      },
+      "macro_f1": {
+        "model_a": 0.7514431544541456,
+        "model_b": 0.7267346288579098,
+        "diff": -0.02470852559623571,
+        "ci_lower": -0.039720097539213475,
+        "ci_upper": -0.010712364620051708,
+        "ci_95": [
+          -0.039720097539213475,
+          -0.010712364620051708
+        ],
+        "p_positive": 0.0006
+      },
+      "discordant": {
+        "a_right_b_wrong": 79,
+        "b_right_a_wrong": 38,
+        "both_right": 1111,
+        "both_wrong": 346
+      }
+    },
+    {
+      "model_a": "b_mixed_efficientnet_v2_s",
+      "model_b": "c_finetune_efficientnet_v2_s",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_efficientnet_v2_s/20261121_122244/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/c_finetune_efficientnet_v2_s/20261121_192229/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.729987293519695,
+        "model_b": 0.6937738246505718,
+        "diff": -0.036213468869123244,
+        "ci_lower": -0.05969238673249478,
+        "ci_upper": -0.013418316134797352,
+        "ci_95": [
+          -0.05969238673249478,
+          -0.013418316134797352
+        ],
+        "p_positive": 0.0012
+      },
+      "macro_f1": {
+        "model_a": 0.7267346288579098,
+        "model_b": 0.6859071767700227,
+        "diff": -0.040827452087887184,
+        "ci_lower": -0.0653625633526138,
+        "ci_upper": -0.017139618760951072,
+        "ci_95": [
+          -0.0653625633526138,
+          -0.017139618760951072
+        ],
+        "p_positive": 0.0006
+      },
+      "discordant": {
+        "a_right_b_wrong": 173,
+        "b_right_a_wrong": 116,
+        "both_right": 976,
+        "both_wrong": 309
+      }
+    },
+    {
+      "model_a": "b_mixed_resnet50",
+      "model_b": "c_finetune_resnet50",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_resnet50/20261121_131527/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/c_finetune_resnet50/20261121_195412/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.7185514612452351,
+        "model_b": 0.6956797966963151,
+        "diff": -0.02287166454891998,
+        "ci_lower": -0.04235279409176009,
+        "ci_upper": -0.003794946544224022,
+        "ci_95": [
+          -0.04235279409176009,
+          -0.003794946544224022
+        ],
+        "p_positive": 0.0096
+      },
+      "macro_f1": {
+        "model_a": 0.7192488751992523,
+        "model_b": 0.6910774111206568,
+        "diff": -0.0281714640785955,
+        "ci_lower": -0.050010795822532525,
+        "ci_upper": -0.007214951796217747,
+        "ci_95": [
+          -0.050010795822532525,
+          -0.007214951796217747
+        ],
+        "p_positive": 0.0042
+      },
+      "discordant": {
+        "a_right_b_wrong": 139,
+        "b_right_a_wrong": 103,
+        "both_right": 992,
+        "both_wrong": 340
+      }
+    },
+    {
+      "model_a": "b_mixed_vit_b_16",
+      "model_b": "c_finetune_vit_b_16",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_vit_b_16/20261121_134843/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/c_finetune_vit_b_16/20261121_201424/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.7096569250317663,
+        "model_b": 0.7020330368487929,
+        "diff": -0.007623888182973326,
+        "ci_lower": -0.02725532753645134,
+        "ci_upper": 0.011487284671264964,
+        "ci_95": [
+          -0.02725532753645134,
+          0.011487284671264964
+        ],
+        "p_positive": 0.2076
+      },
+      "macro_f1": {
+        "model_a": 0.7009097933080243,
+        "model_b": 0.6993575611500695,
+        "diff": -0.0015522321579547471,
+        "ci_lower": -0.022473112173676413,
+        "ci_upper": 0.019187251943977208,
+        "ci_95": [
+          -0.022473112173676413,
+          0.019187251943977208
+        ],
+        "p_positive": 0.4444
+      },
+      "discordant": {
+        "a_right_b_wrong": 117,
+        "b_right_a_wrong": 105,
+        "both_right": 1000,
+        "both_wrong": 352
+      }
+    },
+    {
+      "model_a": "a_pv_only_resnet50",
+      "model_b": "a_field_aug_resnet50",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/a_pv_only_resnet50/20261121_155207/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/a_field_aug_resnet50/20261124_104807/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.1670902160101652,
+        "model_b": 0.1905972045743329,
+        "diff": 0.02350698856416772,
+        "ci_lower": 0.005736046327532248,
+        "ci_upper": 0.04042322485773953,
+        "ci_95": [
+          0.005736046327532248,
+          0.04042322485773953
+        ],
+        "p_positive": 0.995
+      },
+      "macro_f1": {
+        "model_a": 0.16482206612734415,
+        "model_b": 0.17687379516105997,
+        "diff": 0.012051729033715819,
+        "ci_lower": -0.007345242199154998,
+        "ci_upper": 0.03155522690610391,
+        "ci_95": [
+          -0.007345242199154998,
+          0.03155522690610391
+        ],
+        "p_positive": 0.8826
+      },
+      "discordant": {
+        "a_right_b_wrong": 75,
+        "b_right_a_wrong": 112,
+        "both_right": 188,
+        "both_wrong": 1199
+      }
+    },
+    {
+      "model_a": "a_field_aug_resnet50",
+      "model_b": "b_mixed_resnet50",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/a_field_aug_resnet50/20261124_104807/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_resnet50/20261121_131527/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.1905972045743329,
+        "model_b": 0.7185514612452351,
+        "diff": 0.5279542566709021,
+        "ci_lower": 0.4968352422412131,
+        "ci_upper": 0.5581568586577129,
+        "ci_95": [
+          0.4968352422412131,
+          0.5581568586577129
+        ],
+        "p_positive": 1.0
+      },
+      "macro_f1": {
+        "model_a": 0.17687379516105997,
+        "model_b": 0.7192488751992523,
+        "diff": 0.5423750800381923,
+        "ci_lower": 0.5127453399249081,
+        "ci_upper": 0.5715623468647457,
+        "ci_95": [
+          0.5127453399249081,
+          0.5715623468647457
+        ],
+        "p_positive": 1.0
+      },
+      "discordant": {
+        "a_right_b_wrong": 55,
+        "b_right_a_wrong": 886,
+        "both_right": 245,
+        "both_wrong": 388
+      }
+    },
+    {
+      "model_a": "summary_b_eff_vit",
+      "model_b": "d_fusion_concat_fusion_concat",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/summary_b_eff_vit/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/d_fusion_concat_fusion_concat/20261124_132427/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.7477763659466328,
+        "model_b": 0.7426937738246506,
+        "diff": -0.0050825921219821435,
+        "ci_lower": -0.017252396166134276,
+        "ci_upper": 0.006858930934896108,
+        "ci_95": [
+          -0.017252396166134276,
+          0.006858930934896108
+        ],
+        "p_positive": 0.1936
+      },
+      "macro_f1": {
+        "model_a": 0.7422416915263166,
+        "model_b": 0.741444418290009,
+        "diff": -0.0007972732363076274,
+        "ci_lower": -0.013813472138971005,
+        "ci_upper": 0.012015557153300608,
+        "ci_95": [
+          -0.013813472138971005,
+          0.012015557153300608
+        ],
+        "p_positive": 0.447
+      },
+      "discordant": {
+        "a_right_b_wrong": 45,
+        "b_right_a_wrong": 37,
+        "both_right": 1132,
+        "both_wrong": 360
+      }
+    },
+    {
+      "model_a": "summary_b_eff_vit",
+      "model_b": "d_fusion_gated_fusion_gated",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/summary_b_eff_vit/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/d_fusion_gated_fusion_gated/20261124_134947/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.7477763659466328,
+        "model_b": 0.7312579415501906,
+        "diff": -0.016518424396442133,
+        "ci_lower": -0.03011378863811768,
+        "ci_upper": -0.0032010243277849045,
+        "ci_95": [
+          -0.03011378863811768,
+          -0.0032010243277849045
+        ],
+        "p_positive": 0.0034
+      },
+      "macro_f1": {
+        "model_a": 0.7422416915263166,
+        "model_b": 0.7287257901090849,
+        "diff": -0.01351590141723169,
+        "ci_lower": -0.0274102674861706,
+        "ci_upper": -0.0005725059593723478,
+        "ci_95": [
+          -0.0274102674861706,
+          -0.0005725059593723478
+        ],
+        "p_positive": 0.0206
+      },
+      "discordant": {
+        "a_right_b_wrong": 63,
+        "b_right_a_wrong": 37,
+        "both_right": 1114,
+        "both_wrong": 360
+      }
+    },
+    {
+      "model_a": "b_mixed_efficientnet_v2_s",
+      "model_b": "d_fusion_concat_fusion_concat",
+      "model_a_file": "/home/ubuntu/plant-disease-detection/runs/b_mixed_efficientnet_v2_s/20261121_122244/eval/predictions_field_test.csv",
+      "model_b_file": "/home/ubuntu/plant-disease-detection/runs/d_fusion_concat_fusion_concat/20261124_132427/eval/predictions_field_test.csv",
+      "set": "field_test",
+      "num_samples": 1574,
+      "num_clusters": 1396,
+      "classes_present_count": 33,
+      "top1": {
+        "model_a": 0.729987293519695,
+        "model_b": 0.7426937738246506,
+        "diff": 0.01270648030495558,
+        "ci_lower": 0.0038510293866991312,
+        "ci_upper": 0.021725239616613434,
+        "ci_95": [
+          0.0038510293866991312,
+          0.021725239616613434
+        ],
+        "p_positive": 0.9964
+      },
+      "macro_f1": {
+        "model_a": 0.7267346288579098,
+        "model_b": 0.741444418290009,
+        "diff": 0.014709789432099107,
+        "ci_lower": 0.005874298045182788,
+        "ci_upper": 0.024250531032414705,
+        "ci_95": [
+          0.005874298045182788,
+          0.024250531032414705
+        ],
+        "p_positive": 1.0
+      },
+      "discordant": {
+        "a_right_b_wrong": 13,
+        "b_right_a_wrong": 33,
+        "both_right": 1136,
+        "both_wrong": 392
+      }
+    }
+  ]
+}

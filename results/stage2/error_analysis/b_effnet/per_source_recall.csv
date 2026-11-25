@@ -1,0 +1,3 @@
+source,total,correct,errors,recall,recall_pct
+plantdoc,362,281,81,0.776243,77.62
+plantwild,1212,868,344,0.716172,71.62
