@@ -75,3 +75,4 @@ ml/auth_colab.py
 !results/stage2/**/*.md
 !results/stage2/calibration/*.png
 results/stage2/error_analysis/**/*.png
+results/error_analysis/**/*.png
