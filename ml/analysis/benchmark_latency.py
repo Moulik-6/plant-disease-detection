@@ -49,7 +49,11 @@ if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
 
 from ml.analysis.gradcam import load_model_and_classes
+from ml.src.model_zoo import load_checkpoint_model
 from ml.src.utils import load_config
+
+PROJECT_ROOT = _repo_root
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def resolve_path(rel_or_abs_path: str) -> str:
@@ -135,7 +139,19 @@ def parse_args():
     )
     parser.add_argument(
         "--checkpoints-dir", type=str, default="ml/checkpoints",
-        help="Directory containing model checkpoints"
+        help="Directory containing legacy model checkpoints (used when --checkpoint is not given)"
+    )
+    parser.add_argument(
+        "--checkpoint",
+        dest="checkpoints",
+        action="append",
+        nargs="+",
+        default=[],
+        help=(
+            "Path(s) to model checkpoint (.pth) or run directory containing best.pth "
+            "(repeatable or space/comma-separated). Benchmarks each chosen model and, "
+            "when multiple checkpoints are given, their sequential ensemble."
+        ),
     )
     parser.add_argument(
         "--results-dir", type=str, default="ml/results",
@@ -162,6 +178,56 @@ def parse_args():
         help="Device to benchmark on (cuda / cpu). Defaults to auto-detection."
     )
     return parser.parse_args()
+
+
+def _flatten_checkpoint_args(raw_args: List[Any]) -> List[str]:
+    """Flattens repeatable/space-or-comma-separated --checkpoint CLI values."""
+    flattened: List[str] = []
+    for item in raw_args:
+        items = item if isinstance(item, list) else [item]
+        for sub in items:
+            for part in str(sub).split(","):
+                part = part.strip()
+                if part:
+                    flattened.append(part)
+    return flattened
+
+
+def _resolve_checkpoint_file(raw_path: str) -> str:
+    """Resolves a checkpoint .pth file path (or run directory containing best.pth)."""
+    resolved = resolve_path(raw_path)
+    if os.path.isdir(resolved):
+        for candidate in ("best.pth", "best_model.pth"):
+            cand_path = os.path.join(resolved, candidate)
+            if os.path.isfile(cand_path):
+                return cand_path
+    return resolved
+
+
+def _derive_model_name(ckpt_path: Path, arch: str, used_names: set) -> str:
+    """Builds a unique display key for a loaded checkpoint."""
+    base = arch or ckpt_path.stem
+    if base not in used_names and base != "ensemble":
+        return base
+
+    stem = ckpt_path.stem
+    parent = ckpt_path.parent.name
+    grandparent = ckpt_path.parent.parent.name if ckpt_path.parent.parent else ""
+    if stem not in ("best", "best_model", "last", "last_model", "checkpoint"):
+        candidate = f"{base}_{stem}"
+    elif parent and parent not in ("checkpoints", "") and not parent.replace("_", "").isdigit():
+        candidate = f"{base}_{parent}"
+    elif grandparent:
+        candidate = f"{base}_{grandparent}"
+    else:
+        candidate = base
+
+    name = candidate
+    idx = 2
+    while name in used_names or name == "ensemble":
+        name = f"{candidate}_{idx}"
+        idx += 1
+    return name
 
 
 def main():
@@ -195,48 +261,71 @@ def main():
     print(f"  Benchmark Rounds:   {args.rounds} (with {args.runs_per_round} runs/round = {args.rounds * args.runs_per_round} total timed runs)")
     print("=" * 97)
 
-    results_dir = resolve_path(args.results_dir)
-    os.makedirs(results_dir, exist_ok=True)
-
-    output_path = (
-        resolve_path(args.output)
-        if args.output
-        else os.path.join(results_dir, "latency.json")
-    )
+    if args.output:
+        output_path = resolve_path(args.output)
+    else:
+        results_dir = resolve_path(args.results_dir)
+        output_path = os.path.join(results_dir, "latency.json")
+    out_parent = os.path.dirname(os.path.abspath(output_path))
+    if out_parent:
+        os.makedirs(out_parent, exist_ok=True)
 
     # 3. Model configs and checkpoint loading
-    model_names = ["resnet50", "efficientnet_v2", "vit"]
-    config_paths = {
-        "resnet50": resolve_path("ml/legacy/config.yaml"),
-        "efficientnet_v2": resolve_path("ml/legacy/efficientnet_v2.yaml"),
-        "vit": resolve_path("ml/legacy/vit.yaml")
-    }
-    ckpt_paths = {
-        name: resolve_path(os.path.join(args.checkpoints_dir, name, "best_model.pth"))
-        for name in model_names
-    }
-
+    requested_ckpts = _flatten_checkpoint_args(args.checkpoints)
     loaded_models: Dict[str, torch.nn.Module] = {}
-    print("\n[*] Loading models with load_model_and_classes...")
-    for name in model_names:
-        cpath = ckpt_paths[name]
-        cfg_path = config_paths[name]
-        if not os.path.exists(cpath):
-            raise FileNotFoundError(f"Checkpoint for '{name}' not found at: {cpath}")
-        print(f"    - Loading '{name}' from {cpath}...")
-        model, _, arch, _, _ = load_model_and_classes(cfg_path, cpath, device)
-        model.eval()
-        loaded_models[name] = model
+    ckpt_paths: Dict[str, str] = {}
+    model_names: List[str] = []
 
-    m_resnet = loaded_models["resnet50"]
-    m_eff = loaded_models["efficientnet_v2"]
-    m_vit = loaded_models["vit"]
+    if requested_ckpts:
+        print("\n[*] Loading specified checkpoint(s) with load_checkpoint_model...")
+        used_names = set()
+        for raw_cpath in requested_ckpts:
+            cpath = _resolve_checkpoint_file(raw_cpath)
+            if not os.path.isfile(cpath):
+                raise FileNotFoundError(f"Checkpoint not found at: {cpath}")
+            sibling_cfg = Path(cpath).parent / "config.yaml"
+            fallback_cfg = load_config(str(sibling_cfg)) if sibling_cfg.is_file() else None
+            print(f"    - Loading checkpoint from {cpath}...")
+            model, _, arch, _, _ = load_checkpoint_model(cpath, config=fallback_cfg, device=device)
+            model.eval()
+            name = _derive_model_name(Path(cpath), arch, used_names)
+            used_names.add(name)
+            model_names.append(name)
+            loaded_models[name] = model
+            ckpt_paths[name] = cpath
+            print(f"      -> Registered as '{name}' (architecture: {arch})")
+    else:
+        model_names = ["resnet50", "efficientnet_v2", "vit"]
+        config_paths = {
+            "resnet50": resolve_path("ml/legacy/config.yaml"),
+            "efficientnet_v2": resolve_path("ml/legacy/efficientnet_v2.yaml"),
+            "vit": resolve_path("ml/legacy/vit.yaml")
+        }
+        ckpt_paths = {
+            name: resolve_path(os.path.join(args.checkpoints_dir, name, "best_model.pth"))
+            for name in model_names
+        }
+
+        print("\n[*] Loading models with load_model_and_classes...")
+        for name in model_names:
+            cpath = ckpt_paths[name]
+            cfg_path = config_paths[name]
+            if not os.path.exists(cpath):
+                raise FileNotFoundError(f"Checkpoint for '{name}' not found at: {cpath}")
+            print(f"    - Loading '{name}' from {cpath}...")
+            model, _, _, _, _ = load_model_and_classes(cfg_path, cpath, device)
+            model.eval()
+            loaded_models[name] = model
+
+    include_ensemble = len(model_names) > 1
+    ensemble_models = [loaded_models[name] for name in model_names]
 
     # 4. Dummy input (batch size 1, 3 channels, 224x224)
     dummy_input = torch.randn(1, 3, 224, 224, device=device)
 
     # 5. Warm-up runs with torch.inference_mode()
-    print(f"\n[*] Executing {args.warmup} warm-up runs per model/ensemble...")
+    warmup_label = "model/ensemble" if include_ensemble else "model"
+    print(f"\n[*] Executing {args.warmup} warm-up runs per {warmup_label}...")
     with torch.inference_mode():
         for name in model_names:
             m = loaded_models[name]
@@ -245,82 +334,53 @@ def main():
             if device.type == "cuda":
                 torch.cuda.synchronize()
 
-        # Ensemble warm-up
-        for _ in range(args.warmup):
-            _ = m_resnet(dummy_input)
-            _ = m_eff(dummy_input)
-            _ = m_vit(dummy_input)
-        if device.type == "cuda":
-            torch.cuda.synchronize()
+        if include_ensemble:
+            for _ in range(args.warmup):
+                for m in ensemble_models:
+                    _ = m(dummy_input)
+            if device.type == "cuda":
+                torch.cuda.synchronize()
 
     print("    [PASS] Warm-up complete.")
 
     # 6. Interleaved benchmark rounds
-    # In each round: resnet50, efficientnet_v2, vit in turn, then ensemble
-    latencies: Dict[str, List[float]] = {
-        "resnet50": [],
-        "efficientnet_v2": [],
-        "vit": [],
-        "ensemble": []
-    }
+    all_keys = list(model_names) + (["ensemble"] if include_ensemble else [])
+    latencies: Dict[str, List[float]] = {key: [] for key in all_keys}
 
     print(f"\n[*] Running {args.rounds} interleaved rounds ({args.runs_per_round} timed runs each)...")
     with torch.inference_mode():
         for r in range(1, args.rounds + 1):
             t_round_start = time.perf_counter()
 
-            # (a) ResNet-50
-            for _ in range(args.runs_per_round):
-                if device.type == "cuda":
-                    torch.cuda.synchronize()
-                t0 = time.perf_counter()
-                _ = m_resnet(dummy_input)
-                if device.type == "cuda":
-                    torch.cuda.synchronize()
-                t1 = time.perf_counter()
-                latencies["resnet50"].append((t1 - t0) * 1000.0)
+            for name in model_names:
+                m = loaded_models[name]
+                for _ in range(args.runs_per_round):
+                    if device.type == "cuda":
+                        torch.cuda.synchronize()
+                    t0 = time.perf_counter()
+                    _ = m(dummy_input)
+                    if device.type == "cuda":
+                        torch.cuda.synchronize()
+                    t1 = time.perf_counter()
+                    latencies[name].append((t1 - t0) * 1000.0)
 
-            # (b) EfficientNet-V2
-            for _ in range(args.runs_per_round):
-                if device.type == "cuda":
-                    torch.cuda.synchronize()
-                t0 = time.perf_counter()
-                _ = m_eff(dummy_input)
-                if device.type == "cuda":
-                    torch.cuda.synchronize()
-                t1 = time.perf_counter()
-                latencies["efficientnet_v2"].append((t1 - t0) * 1000.0)
-
-            # (c) ViT
-            for _ in range(args.runs_per_round):
-                if device.type == "cuda":
-                    torch.cuda.synchronize()
-                t0 = time.perf_counter()
-                _ = m_vit(dummy_input)
-                if device.type == "cuda":
-                    torch.cuda.synchronize()
-                t1 = time.perf_counter()
-                latencies["vit"].append((t1 - t0) * 1000.0)
-
-            # (d) Ensemble: measured time of running all three sequentially
-            for _ in range(args.runs_per_round):
-                if device.type == "cuda":
-                    torch.cuda.synchronize()
-                t0 = time.perf_counter()
-                _ = m_resnet(dummy_input)
-                _ = m_eff(dummy_input)
-                _ = m_vit(dummy_input)
-                if device.type == "cuda":
-                    torch.cuda.synchronize()
-                t1 = time.perf_counter()
-                latencies["ensemble"].append((t1 - t0) * 1000.0)
+            if include_ensemble:
+                for _ in range(args.runs_per_round):
+                    if device.type == "cuda":
+                        torch.cuda.synchronize()
+                    t0 = time.perf_counter()
+                    for m in ensemble_models:
+                        _ = m(dummy_input)
+                    if device.type == "cuda":
+                        torch.cuda.synchronize()
+                    t1 = time.perf_counter()
+                    latencies["ensemble"].append((t1 - t0) * 1000.0)
 
             t_round_elapsed = time.perf_counter() - t_round_start
             print(f"    - Round {r:02d}/{args.rounds:02d} completed in {t_round_elapsed:.2f}s")
 
     # 7. Compute statistics (median, p10, p90, ratio)
     bench_results: Dict[str, Dict[str, Any]] = {}
-    all_keys = ["resnet50", "efficientnet_v2", "vit", "ensemble"]
     noisy_warnings = []
 
     for key in all_keys:
@@ -346,12 +406,13 @@ def main():
             )
 
     # 8. Print Results Table
+    name_width = max(17, max(len(k) for k in all_keys))
     print("\n" + "=" * 97)
     print(" LATENCY BENCHMARK RESULTS SUMMARY (BATCH SIZE 1)")
     print("=" * 97)
     table_headers = ["Model", "Median (ms)", "p10 (ms)", "p90 (ms)", "p90/p10 Ratio", "Stability"]
-    row_fmt = "| {:<17} | {:>13} | {:>11} | {:>11} | {:>15} | {:>11} |"
-    divider = "+-------------------+---------------+-------------+-------------+-----------------+-------------+"
+    row_fmt = f"| {{:<{name_width}}} | {{:>13}} | {{:>11}} | {{:>11}} | {{:>15}} | {{:>11}} |"
+    divider = f"+{'-' * (name_width + 2)}+---------------+-------------+-------------+-----------------+-------------+"
 
     print(divider)
     print(row_fmt.format(*table_headers))
@@ -395,7 +456,8 @@ def main():
             "rounds": args.rounds,
             "runs_per_round": args.runs_per_round,
             "total_timed_runs_per_model": args.rounds * args.runs_per_round,
-            "batch_size": 1
+            "batch_size": 1,
+            "checkpoints": ckpt_paths,
         },
         "models": bench_results,
         # Direct top-level access
