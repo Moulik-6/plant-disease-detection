@@ -1,0 +1,88 @@
+{
+  "environment": {
+    "device": "cpu",
+    "torch_version": "2.5.1+cpu",
+    "torch_num_threads": 4,
+    "cpu_name": "12th Gen Intel(R) Core(TM) i5-1240P",
+    "power_plan": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)"
+  },
+  "benchmark_config": {
+    "threads": 4,
+    "warmup_runs": 20,
+    "rounds": 10,
+    "runs_per_round": 20,
+    "total_timed_runs_per_model": 200,
+    "batch_size": 1,
+    "checkpoints": {
+      "resnet50": "C:\\Major Project\\plant-disease-detection\\runs\\b_mixed_resnet50\\20261121_131527\\best.pth",
+      "efficientnet_v2_s": "C:\\Major Project\\plant-disease-detection\\runs\\b_mixed_efficientnet_v2_s\\20261121_122244\\best.pth",
+      "vit_b_16": "C:\\Major Project\\plant-disease-detection\\runs\\b_mixed_vit_b_16\\20261121_134843\\best.pth"
+    }
+  },
+  "models": {
+    "resnet50": {
+      "median_ms": 101.80355014745146,
+      "p10_ms": 73.25023987796158,
+      "p90_ms": 110.29172984417528,
+      "p90_p10_ratio": 1.5056842138391164,
+      "noisy_run": true,
+      "sample_count": 200
+    },
+    "efficientnet_v2_s": {
+      "median_ms": 107.94074996374547,
+      "p10_ms": 81.12232002895325,
+      "p90_ms": 118.69185995310545,
+      "p90_p10_ratio": 1.4631221088196602,
+      "noisy_run": false,
+      "sample_count": 200
+    },
+    "vit_b_16": {
+      "median_ms": 292.0851999660954,
+      "p10_ms": 168.0759701412171,
+      "p90_ms": 314.31254984345287,
+      "p90_p10_ratio": 1.8700623865467982,
+      "noisy_run": true,
+      "sample_count": 200
+    },
+    "ensemble": {
+      "median_ms": 512.7367998939008,
+      "p10_ms": 440.2305500581861,
+      "p90_ms": 540.9682099707425,
+      "p90_p10_ratio": 1.2288293256777425,
+      "noisy_run": false,
+      "sample_count": 200
+    }
+  },
+  "resnet50": {
+    "median_ms": 101.80355014745146,
+    "p10_ms": 73.25023987796158,
+    "p90_ms": 110.29172984417528,
+    "p90_p10_ratio": 1.5056842138391164,
+    "noisy_run": true,
+    "sample_count": 200
+  },
+  "efficientnet_v2_s": {
+    "median_ms": 107.94074996374547,
+    "p10_ms": 81.12232002895325,
+    "p90_ms": 118.69185995310545,
+    "p90_p10_ratio": 1.4631221088196602,
+    "noisy_run": false,
+    "sample_count": 200
+  },
+  "vit_b_16": {
+    "median_ms": 292.0851999660954,
+    "p10_ms": 168.0759701412171,
+    "p90_ms": 314.31254984345287,
+    "p90_p10_ratio": 1.8700623865467982,
+    "noisy_run": true,
+    "sample_count": 200
+  },
+  "ensemble": {
+    "median_ms": 512.7367998939008,
+    "p10_ms": 440.2305500581861,
+    "p90_ms": 540.9682099707425,
+    "p90_p10_ratio": 1.2288293256777425,
+    "noisy_run": false,
+    "sample_count": 200
+  }
+}

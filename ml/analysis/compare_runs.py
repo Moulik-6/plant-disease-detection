@@ -210,8 +210,9 @@ def run_paired_cluster_bootstrap(
         den_a = tgt + pa
         den_b = tgt + pb
 
-        f1_a = np.where(den_a > 0, (2.0 * tp_a) / den_a, 0.0)
-        f1_b = np.where(den_b > 0, (2.0 * tp_b) / den_b, 0.0)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            f1_a = np.where(den_a > 0, (2.0 * tp_a) / den_a, 0.0)
+            f1_b = np.where(den_b > 0, (2.0 * tp_b) / den_b, 0.0)
 
         macro_a = np.mean(f1_a, axis=1) if c_count > 0 else np.zeros(bsize)
         macro_b = np.mean(f1_b, axis=1) if c_count > 0 else np.zeros(bsize)
