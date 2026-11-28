@@ -141,12 +141,13 @@ Tracked machine-readable artifacts in this repository:
 
 Environment: `Intel i5-1240P, 4 threads, PyTorch 2.5.1 CPU, fp32`
 
-To be filled from `results/stage2/latency_b_effnet.json` and `results/stage2/latency_b_ensemble.json`:
-
-| Configuration | Median (ms) | p10 (ms) | p90 (ms) | Source File |
+| Configuration | Median (ms) | p10 (ms) | p90 (ms) | Source file |
 | :--- | :---: | :---: | :---: | :--- |
-| **B EfficientNetV2-S alone** | PENDING | PENDING | PENDING | `results/stage2/latency_b_effnet.json` |
-| **B 3-Model Ensemble** | PENDING | PENDING | PENDING | `results/stage2/latency_b_ensemble.json` |
+| **B EfficientNetV2-S alone** (light mode) | 80.9 | 79.4 | 83.9 | `results/stage2/latency_b_effnet.json` |
+| **B 3-model sequential ensemble** | 311.9 | 307.4 | 319.0 | `results/stage2/latency_b_ensemble.json` |
+| *ensemble members: ResNet-50* | 69.4 | 67.4 | 73.7 | same file |
+| *ensemble members: EfficientNetV2-S* | 82.2 | 80.3 | 84.4 | same file |
+| *ensemble members: ViT-B/16* | 159.9 | 157.0 | 165.8 | same file |
 
 ---
 
