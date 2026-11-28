@@ -73,8 +73,11 @@ async def lifespan(app: FastAPI):
     max_upload_bytes = int(app_config.get("max_upload_bytes", 5242880))
     max_image_pixels = int(app_config.get("max_image_pixels", 25000000))
 
-    logger.info("Plant Disease Detection service ready. Device=%s, Models=%d, StoreImages=%s",
-                predictor.device, len(predictor.models), store_images)
+    logger.info(
+        "Plant Disease Detection service ready. Mode=%s, Device=%s, Models=%d, T=%.4f, Confident>=%.4f, Uncertain>=%.4f, StoreImages=%s",
+        predictor.mode, predictor.device, len(predictor.models),
+        predictor.temperature, predictor.confident_threshold, predictor.uncertain_threshold, store_images,
+    )
     yield
 
 
@@ -165,25 +168,37 @@ async def validate_and_load_image(file: UploadFile) -> Image.Image:
 
 @app.get("/health", response_model=HealthResponse)
 async def get_health():
-    """Returns system status, loaded model architectures, device, and calibration parameters."""
+    """Returns system status, mode, loaded model architectures, device, and calibration thresholds."""
     loaded_info = [
         LoadedModelInfo(architecture=arch, path=p)
         for arch, p in zip(predictor.architectures, predictor.loaded_model_paths)
     ]
+    thresholds_map = {
+        "confident": predictor.confident_threshold,
+        "uncertain": predictor.uncertain_threshold,
+    }
     calib_info = CalibrationInfo(
         temperature=predictor.temperature,
-        threshold=predictor.threshold,
+        threshold=predictor.confident_threshold,
+        confident_threshold=predictor.confident_threshold,
+        uncertain_threshold=predictor.uncertain_threshold,
+        thresholds=thresholds_map,
+        operating_points=predictor.operating_points or None,
         source=str(predictor.calibration_path) if predictor.calibration_path else None,
     )
     return HealthResponse(
         status="ok",
+        mode=predictor.mode,
         device=str(predictor.device),
         models_loaded=len(predictor.models),
         model_names=predictor.architectures,
         loaded_models=loaded_info,
         calibration=calib_info,
         temperature=predictor.temperature,
-        threshold=predictor.threshold,
+        threshold=predictor.confident_threshold,
+        confident_threshold=predictor.confident_threshold,
+        uncertain_threshold=predictor.uncertain_threshold,
+        thresholds=thresholds_map,
     )
 
 

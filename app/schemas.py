@@ -12,20 +12,28 @@ class LoadedModelInfo(BaseModel):
 
 
 class CalibrationInfo(BaseModel):
-    temperature: float = Field(1.0, examples=[1.0])
-    threshold: float = Field(0.5, examples=[0.5])
-    source: Optional[str] = Field(None, examples=["results/calibration.json"])
+    temperature: float = Field(0.9078, examples=[0.9078])
+    threshold: float = Field(0.6782, examples=[0.6782])
+    confident_threshold: float = Field(0.6782, examples=[0.6782])
+    uncertain_threshold: float = Field(0.4290, examples=[0.4290])
+    thresholds: Dict[str, float] = Field(default_factory=dict)
+    operating_points: Optional[Dict[str, Any]] = None
+    source: Optional[str] = Field(None, examples=["results/stage2/calibration/b_ensemble.json"])
 
 
 class HealthResponse(BaseModel):
     status: str = Field("ok", examples=["ok"])
+    mode: str = Field("ensemble", examples=["ensemble"])
     device: str = Field(..., examples=["cpu"])
-    models_loaded: int = Field(..., examples=[1])
-    model_names: List[str] = Field(default_factory=list, examples=[["resnet50"]])
+    models_loaded: int = Field(..., examples=[3])
+    model_names: List[str] = Field(default_factory=list, examples=[["resnet50", "efficientnet_v2_s", "vit_b_16"]])
     loaded_models: List[LoadedModelInfo] = Field(default_factory=list)
     calibration: CalibrationInfo
-    temperature: float = Field(..., examples=[1.0])
-    threshold: float = Field(..., examples=[0.5])
+    temperature: float = Field(..., examples=[0.9078])
+    threshold: float = Field(..., examples=[0.6782])
+    confident_threshold: float = Field(..., examples=[0.6782])
+    uncertain_threshold: float = Field(..., examples=[0.4290])
+    thresholds: Dict[str, float] = Field(default_factory=dict)
 
 
 class ClassItem(BaseModel):
