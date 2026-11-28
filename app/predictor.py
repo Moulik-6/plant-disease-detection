@@ -40,7 +40,10 @@ class PlantDiseasePredictor:
         calibration_path: Optional[Union[str, Path]] = None,
         device_str: Optional[str] = None,
         threshold: Optional[float] = None,
+        confident_threshold: Optional[float] = None,
+        uncertain_threshold: Optional[float] = None,
         temperature: Optional[float] = None,
+        mode: Optional[str] = None,
     ):
         # 1. Load config defaults
         self.config_path = Path(config_path) if config_path else Path(__file__).resolve().parent / "config.yaml"
@@ -49,7 +52,17 @@ class PlantDiseasePredictor:
             with open(self.config_path, "r", encoding="utf-8") as f:
                 self.raw_config = yaml.safe_load(f) or {}
 
-        # 2. Resolve PyTorch Device
+        # 2. Resolve inference mode ("ensemble" or "light")
+        env_mode = os.environ.get("APP_MODE", "").strip().lower()
+        raw_mode = str(mode if mode is not None else (env_mode or self.raw_config.get("mode", "ensemble"))).strip().lower()
+        if raw_mode in ("ensemble", "default", "full", ""):
+            self.mode = "ensemble"
+        elif raw_mode == "light":
+            self.mode = "light"
+        else:
+            raise ValueError(f"Unsupported APP_MODE '{raw_mode}'. Expected 'ensemble' or 'light'.")
+
+        # 3. Resolve PyTorch Device
         env_device = os.environ.get("APP_DEVICE", "").strip().lower()
         cfg_device = str(device_str or env_device or self.raw_config.get("device", "auto")).lower()
         if cfg_device == "cuda" and torch.cuda.is_available():
@@ -59,36 +72,80 @@ class PlantDiseasePredictor:
         else:
             self.device = torch.device("cpu")
 
-        # 3. Resolve Checkpoint Paths
+        # 4. Resolve Checkpoint Paths (explicit arg > APP_CHECKPOINTS > mode-specific config)
         env_ckpts = os.environ.get("APP_CHECKPOINTS", "").strip()
         if checkpoint_paths:
             self.ckpt_paths = [str(p).strip() for p in checkpoint_paths if str(p).strip()]
         elif env_ckpts:
             self.ckpt_paths = [p.strip() for p in env_ckpts.split(",") if p.strip()]
         else:
-            cfg_ckpts = self.raw_config.get("checkpoints", [])
+            ckpt_key = "light_checkpoints" if self.mode == "light" else "checkpoints"
+            cfg_ckpts = self.raw_config.get(ckpt_key, [])
             if isinstance(cfg_ckpts, str):
                 self.ckpt_paths = [p.strip() for p in cfg_ckpts.split(",") if p.strip()]
             else:
                 self.ckpt_paths = [str(p).strip() for p in cfg_ckpts if str(p).strip()]
 
-        # 4. Resolve Calibration & Thresholds
+        # 5. Resolve Calibration & Operating-Point Thresholds
+        calib_key = "light_calibration_path" if self.mode == "light" else "calibration_path"
         env_calib = os.environ.get("APP_CALIBRATION", "").strip()
-        calib_file = Path(calibration_path or env_calib or self.raw_config.get("calibration_path") or "")
-        self.calibration_path: Optional[Path] = calib_file if calib_file.is_file() else None
+        raw_calib_spec = calibration_path if calibration_path is not None else (
+            env_calib if env_calib else self.raw_config.get(calib_key)
+        )
+        calib_str = str(raw_calib_spec or "").strip()
+        if calib_str.lower() in ("", "none", "null"):
+            self.calibration_path: Optional[Path] = None
+        else:
+            calib_file = Path(calib_str)
+            self.calibration_path = calib_file if calib_file.is_file() else None
+            if self.calibration_path is None:
+                logger.warning("Calibration file not found at %s. Falling back to mode defaults.", calib_file)
 
-        self.temperature: float = 1.0
-        self.threshold: float = float(self.raw_config.get("default_threshold", 0.5))
+        if self.mode == "light":
+            self.temperature: float = float(self.raw_config.get("light_default_temperature", 1.0675))
+            self.confident_threshold: float = float(self.raw_config.get("light_default_confident_threshold", 0.8042))
+            self.uncertain_threshold: float = float(self.raw_config.get("light_default_uncertain_threshold", 0.5024))
+        else:
+            self.temperature = float(self.raw_config.get("default_temperature", 0.9078))
+            self.confident_threshold = float(
+                self.raw_config.get("default_confident_threshold", self.raw_config.get("default_threshold", 0.6782))
+            )
+            self.uncertain_threshold = float(self.raw_config.get("default_uncertain_threshold", 0.4290))
+
+        self.operating_points: Dict[str, Any] = {}
 
         if self.calibration_path and self.calibration_path.exists():
             self._load_calibration(self.calibration_path)
 
+        # Apply explicit constructor or env overrides
+        env_temp = os.environ.get("APP_TEMPERATURE", "").strip()
+        env_conf_th = os.environ.get("APP_CONFIDENT_THRESHOLD", "").strip() or os.environ.get("APP_THRESHOLD", "").strip()
+        env_unc_th = os.environ.get("APP_UNCERTAIN_THRESHOLD", "").strip()
+
         if temperature is not None:
             self.temperature = float(temperature)
-        if threshold is not None:
-            self.threshold = float(threshold)
+        elif env_temp:
+            self.temperature = float(env_temp)
 
-        # 5. Load Models
+        resolved_conf_override = confident_threshold if confident_threshold is not None else threshold
+        if resolved_conf_override is not None:
+            self.confident_threshold = float(resolved_conf_override)
+            # Maintain 0.5x fallback ratio only when uncertain threshold wasn't explicitly loaded/configured
+            if uncertain_threshold is None and not env_unc_th and "keep_90_known" not in self.operating_points:
+                self.uncertain_threshold = 0.5 * self.confident_threshold
+        elif env_conf_th:
+            self.confident_threshold = float(env_conf_th)
+            if uncertain_threshold is None and not env_unc_th and "keep_90_known" not in self.operating_points:
+                self.uncertain_threshold = 0.5 * self.confident_threshold
+
+        if uncertain_threshold is not None:
+            self.uncertain_threshold = float(uncertain_threshold)
+        elif env_unc_th:
+            self.uncertain_threshold = float(env_unc_th)
+
+        self.threshold: float = self.confident_threshold
+
+        # 6. Load Models
         self.models: List[torch.nn.Module] = []
         self.model_configs: List[Dict[str, Any]] = []
         self.architectures: List[str] = []
@@ -102,8 +159,17 @@ class PlantDiseasePredictor:
         self.mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
         self.std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
+    @staticmethod
+    def _extract_threshold(entry: Any) -> Optional[float]:
+        """Extracts a scalar float threshold from a numeric value or operating-point dict."""
+        if isinstance(entry, (int, float)):
+            return float(entry)
+        if isinstance(entry, dict) and "threshold" in entry:
+            return float(entry["threshold"])
+        return None
+
     def _load_calibration(self, calib_path: Path) -> None:
-        """Parses temperature and threshold from calibration JSON."""
+        """Parses temperature and operating-point thresholds from calibration JSON."""
         try:
             with open(calib_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -111,33 +177,61 @@ class PlantDiseasePredictor:
             # Resolve temperature
             if "temperature" in data:
                 self.temperature = float(data["temperature"])
+            elif "calibration" in data and isinstance(data["calibration"], dict) and "temperature" in data["calibration"]:
+                self.temperature = float(data["calibration"]["temperature"])
             elif "T" in data:
                 self.temperature = float(data["T"])
             elif "optimal_temperature" in data:
                 self.temperature = float(data["optimal_temperature"])
             elif "scaling" in data and isinstance(data["scaling"], dict):
-                self.temperature = float(data["scaling"].get("temperature", 1.0))
+                self.temperature = float(data["scaling"].get("temperature", self.temperature))
 
-            # Resolve threshold
-            if "threshold" in data:
-                self.threshold = float(data["threshold"])
-            elif "operating_points" in data and isinstance(data["operating_points"], dict):
-                op = data["operating_points"]
-                if "youden_j" in op and isinstance(op["youden_j"], dict):
-                    self.threshold = float(op["youden_j"].get("threshold", 0.5))
-                elif "keep_90_known" in op and isinstance(op["keep_90_known"], dict):
-                    self.threshold = float(op["keep_90_known"].get("threshold", 0.5))
-            elif "thresholds" in data and isinstance(data["thresholds"], dict):
-                th = data["thresholds"]
-                if "youden_j" in th:
-                    val = th["youden_j"]
-                    self.threshold = float(val.get("threshold", val) if isinstance(val, dict) else val)
-                elif "keep_90_known" in th:
-                    val = th["keep_90_known"]
-                    self.threshold = float(val.get("threshold", val) if isinstance(val, dict) else val)
-            logger.info("Loaded calibration from %s: T=%.4f, threshold=%.4f", calib_path, self.temperature, self.threshold)
+            # Store operating points metadata and extract Youden J & Keep-90%-Known thresholds
+            op = data.get("operating_points") if isinstance(data.get("operating_points"), dict) else {}
+            th = data.get("thresholds") if isinstance(data.get("thresholds"), dict) else {}
+            if op:
+                self.operating_points = copy.deepcopy(op)
+
+            conf_th: Optional[float] = None
+            for cand in (op.get("youden_j"), th.get("youden_j"), th.get("confident"), data.get("confident_threshold"), data.get("threshold")):
+                conf_th = self._extract_threshold(cand)
+                if conf_th is not None:
+                    break
+
+            unc_th: Optional[float] = None
+            for cand in (op.get("keep_90_known"), th.get("keep_90_known"), th.get("uncertain"), data.get("uncertain_threshold")):
+                unc_th = self._extract_threshold(cand)
+                if unc_th is not None:
+                    break
+
+            if conf_th is not None:
+                self.confident_threshold = conf_th
+            if unc_th is not None:
+                self.uncertain_threshold = unc_th
+            elif conf_th is not None:
+                # Fallback for simple calibration JSONs without keep_90_known
+                self.uncertain_threshold = 0.5 * self.confident_threshold
+
+            self.threshold = self.confident_threshold
+            logger.info(
+                "Loaded calibration from %s: T=%.4f, confident>=%.4f, uncertain>=%.4f",
+                calib_path, self.temperature, self.confident_threshold, self.uncertain_threshold,
+            )
         except Exception as e:
             logger.warning("Failed to parse calibration JSON at %s: %s. Using defaults.", calib_path, e)
+
+    def classify_confidence(self, confidence: float) -> str:
+        """
+        Categorizes top calibrated probability using operating-point thresholds:
+          - confident:      confidence >= confident_threshold (Youden J)
+          - uncertain:      uncertain_threshold <= confidence < confident_threshold (keep >= 90% known)
+          - not_recognised: confidence < uncertain_threshold
+        """
+        if confidence >= self.confident_threshold:
+            return "confident"
+        if confidence >= self.uncertain_threshold:
+            return "uncertain"
+        return "not_recognised"
 
     def _load_all_models(self) -> None:
         """Loads all specified checkpoints into memory."""
@@ -208,17 +302,18 @@ class PlantDiseasePredictor:
             # If no model is loaded (e.g., bare initialization), raise error
             raise RuntimeError("No model checkpoints loaded in PlantDiseasePredictor.")
 
-        # Ensemble calibrated inference
+        # Ensemble calibrated inference matching ml/analysis/calibrate.py:
+        # average member probabilities -> convert to log-probabilities -> temperature scale -> softmax
         all_probs = []
         with torch.no_grad():
             for model in self.models:
                 logits = model(tensor)
-                scaled_logits = logits / max(1e-5, self.temperature)
-                probs = F.softmax(scaled_logits, dim=-1)
-                all_probs.append(probs)
+                all_probs.append(F.softmax(logits, dim=-1))
 
-            # Average probabilities across ensemble members
-            avg_probs = torch.mean(torch.stack(all_probs), dim=0)[0].cpu().numpy()
+            ens_probs = torch.mean(torch.stack(all_probs), dim=0)
+            ens_logits = torch.log(torch.clamp(ens_probs, min=1e-12))
+            cal_probs = F.softmax(ens_logits / max(1e-5, self.temperature), dim=-1)
+            avg_probs = cal_probs[0].cpu().numpy()
 
         latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
 
@@ -227,16 +322,7 @@ class PlantDiseasePredictor:
         pred_class = self.idx_to_class.get(pred_idx, f"Class_{pred_idx}")
         crop, condition, healthy = parse_label(pred_class)
 
-        # Operating point status categorization:
-        # - confident: max probability >= threshold
-        # - uncertain: 0.5 * threshold <= max probability < threshold
-        # - not_recognised: max probability < 0.5 * threshold
-        if confidence >= self.threshold:
-            status = "confident"
-        elif confidence >= 0.5 * self.threshold:
-            status = "uncertain"
-        else:
-            status = "not_recognised"
+        status = self.classify_confidence(confidence)
 
         # Differential Diagnoses (Top 3)
         top3_indices = np.argsort(avg_probs)[::-1][:3]

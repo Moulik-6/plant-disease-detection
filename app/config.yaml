@@ -1,11 +1,22 @@
 # Plant Disease Detection Web API & Inference Configuration
 
-# Model checkpoints (comma-separated or list). Overridden by env var APP_CHECKPOINTS.
-checkpoints:
-  - "ml/checkpoints/resnet50/best_model.pth"
+# Inference mode: "ensemble" (default 3-model B ensemble) | "light" (single EfficientNetV2-S).
+# Overridden by env var APP_MODE.
+mode: "ensemble"
 
-# Path to calibration JSON from ml/analysis/calibrate.py. Overridden by env var APP_CALIBRATION.
-calibration_path: null
+# Default ensemble checkpoints (Stage-II Experiment B). Overridden by env var APP_CHECKPOINTS.
+checkpoints:
+  - "runs/b_mixed_resnet50/20261121_131527/best.pth"
+  - "runs/b_mixed_efficientnet_v2_s/20261121_122244/best.pth"
+  - "runs/b_mixed_vit_b_16/20261121_134843/best.pth"
+
+# Light-mode checkpoint (single EfficientNetV2-S, used when APP_MODE=light and APP_CHECKPOINTS is unset).
+light_checkpoints:
+  - "runs/b_mixed_efficientnet_v2_s/20261121_122244/best.pth"
+
+# Calibration JSON outputs from ml/analysis/calibrate.py. Overridden by env var APP_CALIBRATION.
+calibration_path: "results/stage2/calibration/b_ensemble.json"
+light_calibration_path: "results/stage2/calibration/b_effnet.json"
 
 # SQLite database file. Overridden by env var APP_DB.
 db_path: "app.db"
@@ -23,9 +34,16 @@ upload_dir: "app/uploads"
 max_upload_bytes: 5242880 # 5 MB (5 * 1024 * 1024)
 max_image_pixels: 25000000 # 25 Megapixels (5000 x 5000)
 
-# Default temperature and confidence thresholds if calibration JSON is not provided
-default_temperature: 1.0
-default_threshold: 0.5
+# Fallback temperature and operating-point thresholds if calibration JSON is absent.
+# Individually overridable via APP_TEMPERATURE, APP_CONFIDENT_THRESHOLD, and APP_UNCERTAIN_THRESHOLD.
+default_temperature: 0.9078
+default_confident_threshold: 0.6782
+default_uncertain_threshold: 0.4290
+default_threshold: 0.6782
+
+light_default_temperature: 1.0675
+light_default_confident_threshold: 0.8042
+light_default_uncertain_threshold: 0.5024
 
 # CORS Origins (empty list = disabled). Overridden by env var APP_CORS_ORIGINS.
 cors_origins: []

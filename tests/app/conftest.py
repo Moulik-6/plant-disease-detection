@@ -35,7 +35,18 @@ def synthetic_checkpoints_dir(tmp_path_factory, class_to_idx):
         "config": {"model": {"architecture": "resnet50"}},
     }, str(resnet_path))
 
-    # 2. Fusion Checkpoint
+    # 2. EfficientNetV2-S Checkpoint (for light mode & ensemble tests)
+    effnet = build_model({"model": {"architecture": "efficientnet_v2_s"}}, num_classes=38, pretrained=False)
+    effnet_path = d / "effnet_best.pth"
+    torch.save({
+        "model_state": effnet.state_dict(),
+        "state_dict": effnet.state_dict(),
+        "architecture": "efficientnet_v2_s",
+        "class_to_idx": class_to_idx,
+        "config": {"model": {"architecture": "efficientnet_v2_s"}},
+    }, str(effnet_path))
+
+    # 3. Fusion Checkpoint
     fusion = FusionModel(num_classes=38, mode="concat", pretrained=False)
     fusion_path = d / "fusion_best.pth"
     torch.save({
@@ -46,20 +57,22 @@ def synthetic_checkpoints_dir(tmp_path_factory, class_to_idx):
         "config": {"model": {"architecture": "fusion_concat", "mode": "concat"}},
     }, str(fusion_path))
 
-    # 3. Calibration JSON
+    # 4. Calibration JSON (matching calibrate.py operating points)
     calib_path = d / "calibration.json"
     with open(calib_path, "w", encoding="utf-8") as f:
         json.dump({
-            "temperature": 1.25,
-            "threshold": 0.52,
+            "temperature": 0.9078,
             "operating_points": {
-                "youden_j": {"threshold": 0.52}
+                "youden_j": {"threshold": 0.6782},
+                "keep_90_known": {"threshold": 0.4290},
+                "acc_90_max_cov": {"threshold": 0.8248},
             }
         }, f)
 
     return {
         "dir": d,
         "resnet_path": str(resnet_path),
+        "effnet_path": str(effnet_path),
         "fusion_path": str(fusion_path),
         "calib_path": str(calib_path),
     }
